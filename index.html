@@ -27,6 +27,7 @@
 
     <!-- Tour HUD -->
     <div id="tour-hud" class="screen">
+      <!-- caption-box is now position:fixed/draggable — kept inside overlay for show/hide -->
       <div id="caption-box">
         <span id="part-label" class="part-label"></span>
         <h2 id="team-name" class="team-name"></h2>
@@ -37,7 +38,11 @@
         <button id="back-btn" class="btn-icon" title="Previous">⏮</button>
         <button id="pause-btn" class="btn-icon" title="Pause">⏸</button>
         <span id="step-indicator">1 / 6</span>
-        <button id="skip-btn" class="btn-icon" title="Skip">⏭</button>
+        <button id="skip-btn" class="btn-icon" title="Next">⏭</button>
+        <div id="mode-bar">
+          <button id="mode-auto" class="mode-pill active" title="Slides advance automatically">▶ Auto</button>
+          <button id="mode-manual" class="mode-pill" title="You control each slide transition">⏸ Step</button>
+        </div>
       </div>
     </div>
 

@@ -146,6 +146,22 @@ function setupEvents() {
     tourSequencer.skipToNext();
   });
 
+  // Auto / Step mode toggle
+  const modeAuto   = document.getElementById('mode-auto');
+  const modeManual = document.getElementById('mode-manual');
+
+  modeAuto.addEventListener('click', () => {
+    modeAuto.classList.add('active');
+    modeManual.classList.remove('active');
+    tourSequencer.setManual(false);
+  });
+
+  modeManual.addEventListener('click', () => {
+    modeManual.classList.add('active');
+    modeAuto.classList.remove('active');
+    tourSequencer.setManual(true);
+  });
+
   document.getElementById('replay-btn').addEventListener('click', () => {
     overlay.hideFinale();
     tourSequencer.reset();

@@ -12,6 +12,8 @@ export class TourSequencer {
     this.overlay = overlayController;
     this.currentStep = 0;
     this.isPaused = false;
+    this.isManual = false;      // Step mode: user controls slide transitions
+    this._waitingForNext = false; // true when paused mid-step awaiting user click
     this.masterTimeline = null;
     this.defaultLookAt = defaultLookAt || new THREE.Vector3(0, 0.6, 0);
     this.currentLookAt = this.defaultLookAt.clone();
@@ -98,12 +100,21 @@ export class TourSequencer {
     const failAnim = createFailureAnimation(config.partKey, partGroup, this.carGroup);
     tl.add(failAnim.play(), '+=0.3');
 
-    tl.to({}, { duration: 1.8 });
-
-    tl.call(() => {
-      this.overlay.hideFailure();
-      this.overlay.hideCaption();
-    });
+    if (this.isManual) {
+      // Pause and wait for user to click Next/Skip
+      tl.call(() => {
+        this._waitingForNext = true;
+        this.overlay.showNextCue();
+        this.masterTimeline.pause();
+      }, [], '+=0.3');
+    } else {
+      // Auto-advance after display time
+      tl.to({}, { duration: 1.8 });
+      tl.call(() => {
+        this.overlay.hideFailure();
+        this.overlay.hideCaption();
+      });
+    }
   }
 
   ghostNonHighlighted(activePartKey) {
@@ -270,9 +281,30 @@ export class TourSequencer {
     return this.isPaused;
   }
 
+  /** Switch between Auto (false) and Step/Manual (true) modes. */
+  setManual(manual) {
+    this.isManual = manual;
+    this.overlay.setPauseVisible(!manual);
+    if (manual && this.isPaused) {
+      // Resume so the timeline can reach the manual pause point
+      this.resume();
+    }
+  }
+
   skipToNext() {
-    if (this.masterTimeline) {
-      this.masterTimeline.progress(1);
+    if (this.isManual) {
+      // Regardless of where we are in the step, force-advance
+      this._waitingForNext = false;
+      this.overlay.hideNextCue();
+      this.overlay.hideFailure();
+      this.overlay.hideCaption();
+      if (this.masterTimeline) this.masterTimeline.kill();
+      this.animateRestore(
+        tourStepConfigs[this.currentStep]?.partKey,
+        this.currentStep + 1
+      );
+    } else {
+      if (this.masterTimeline) this.masterTimeline.progress(1);
     }
   }
 
