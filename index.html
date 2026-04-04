@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Every Part Matters</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div id="overlay">
+    <!-- Intro screen -->
+    <div id="intro-screen" class="screen active">
+      <h1 class="title">Every Part Matters</h1>
+      <p class="subtitle">How JCPRD drives success — together</p>
+      <button id="start-btn" class="btn-primary">Start the Tour</button>
+    </div>
+
+    <!-- Tour HUD -->
+    <div id="tour-hud" class="screen">
+      <div id="caption-box">
+        <span id="part-label" class="part-label"></span>
+        <h2 id="team-name" class="team-name"></h2>
+        <p id="team-desc" class="team-desc"></p>
+      </div>
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+      <div id="tour-controls">
+        <button id="back-btn" class="btn-icon" title="Previous">⏮</button>
+        <button id="pause-btn" class="btn-icon" title="Pause">⏸</button>
+        <span id="step-indicator">1 / 6</span>
+        <button id="skip-btn" class="btn-icon" title="Skip">⏭</button>
+      </div>
+    </div>
+
+    <!-- Failure overlay -->
+    <div id="failure-overlay" class="screen">
+      <div id="failure-box">
+        <p id="failure-text" class="failure-text"></p>
+      </div>
+    </div>
+
+    <!-- Finale screen -->
+    <div id="finale-screen" class="screen">
+      <h1 class="finale-title">Every Part. Every Team.<br/>One Machine.</h1>
+      <button id="replay-btn" class="btn-primary">Watch Again</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
