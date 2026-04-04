@@ -27,6 +27,21 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.music-bar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  user-select: none;
+}
+
+.music-bar-btn:hover { opacity: 1; }
+.music-bar-btn.muted  { opacity: 0.35; }
+
 #music-icon {
   color: rgba(255, 255, 255, 0.65);
   font-size: 0.95rem;

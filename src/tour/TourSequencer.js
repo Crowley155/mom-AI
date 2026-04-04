@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { tourStepConfigs } from './steps.js';
 import { tourSteps } from '../ui/captions.js';
 import { createFailureAnimation, resetPart } from './failures.js';
+import { playVO, stopVO } from '../audio/voiceover.js';
 
 export class TourSequencer {
   constructor(camera, carGroup, parts, overlayController, defaultLookAt) {
@@ -90,6 +91,7 @@ export class TourSequencer {
       this.ghostNonHighlighted(config.partKey);
       this.overlay.showCaption(caption.partLabel, caption.teamName, caption.teamDesc);
       this.pulsePartEmissive(partGroup);
+      playVO(`step-${index + 1}-caption`);
     }, [], '-=0.3');
 
     // Caption reading time — base 12s at Normal pace, scales with timeMultiplier
@@ -97,6 +99,7 @@ export class TourSequencer {
 
     tl.call(() => {
       this.overlay.showFailure(caption.failureText);
+      playVO(`step-${index + 1}-failure`);
     });
 
     const failAnim = createFailureAnimation(config.partKey, partGroup, this.carGroup);
@@ -108,11 +111,13 @@ export class TourSequencer {
         this._waitingForNext = true;
         this.overlay.showNextCue();
         this.masterTimeline.pause();
+        // VO continues playing; user clicks Next when ready
       }, [], '+=0.3');
     } else {
       // Failure text reading time — base 8s at Normal pace
       tl.to({}, { duration: 8 * this.timeMultiplier });
       tl.call(() => {
+        stopVO();
         this.overlay.hideFailure();
         this.overlay.hideCaption();
       });
@@ -258,6 +263,7 @@ export class TourSequencer {
 
     tl.call(() => {
       this.overlay.showFinale();
+      playVO('finale');
     }, [], 4.5);
 
     this.masterTimeline = tl;
@@ -304,8 +310,8 @@ export class TourSequencer {
   }
 
   skipToNext() {
+    stopVO();
     if (this.isManual) {
-      // Regardless of where we are in the step, force-advance
       this._waitingForNext = false;
       this.overlay.hideNextCue();
       this.overlay.hideFailure();
@@ -321,6 +327,7 @@ export class TourSequencer {
   }
 
   skipToPrev() {
+    stopVO();
     const prevIndex = Math.max(0, this.currentStep - 1);
     if (this.masterTimeline) {
       this.masterTimeline.kill();
@@ -347,6 +354,7 @@ export class TourSequencer {
   }
 
   reset() {
+    stopVO();
     if (this.masterTimeline) {
       this.masterTimeline.kill();
     }

@@ -5,6 +5,7 @@ import { loadCar } from './car/CarBuilder.js';
 import { TourSequencer } from './tour/TourSequencer.js';
 import { OverlayController } from './ui/overlay.js';
 import { initMusic, playMusic, pauseMusic, stopMusic, setVolume } from './audio/music.js';
+import { setVOMuted } from './audio/voiceover.js';
 
 let scene, camera, renderer, car, parts, tourSequencer, overlay;
 let autoRotate = true;
@@ -144,6 +145,17 @@ function setupEvents() {
 
   document.getElementById('skip-btn').addEventListener('click', () => {
     tourSequencer.skipToNext();
+  });
+
+  // VO mute toggle
+  let voMuted = false;
+  const voToggle = document.getElementById('vo-toggle');
+  voToggle.addEventListener('click', () => {
+    voMuted = !voMuted;
+    setVOMuted(voMuted);
+    voToggle.textContent = voMuted ? '🔇' : '🔊';
+    voToggle.classList.toggle('muted', voMuted);
+    voToggle.title = voMuted ? 'Voiceover off — click to enable' : 'Toggle voiceover narration';
   });
 
   // Reading speed control
