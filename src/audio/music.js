@@ -4,7 +4,7 @@ let bgMusic = null;
 
 export function initMusic() {
   bgMusic = new Howl({
-    src: ['https://cdn.pixabay.com/audio/2022/10/25/audio_33843be78c.mp3'],
+    src: [`${import.meta.env.BASE_URL}audio/background.mp3`],
     loop: true,
     volume: 0.3,
     html5: true,

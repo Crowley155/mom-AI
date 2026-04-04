@@ -4,7 +4,7 @@ import gsap from 'gsap';
 import { loadCar } from './car/CarBuilder.js';
 import { TourSequencer } from './tour/TourSequencer.js';
 import { OverlayController } from './ui/overlay.js';
-import { initMusic, playMusic, pauseMusic, stopMusic } from './audio/music.js';
+import { initMusic, playMusic, pauseMusic, stopMusic, setVolume } from './audio/music.js';
 
 let scene, camera, renderer, car, parts, tourSequencer, overlay;
 let autoRotate = true;
@@ -131,6 +131,11 @@ function setupEvents() {
     overlay.updatePauseButton(isPaused);
     if (isPaused) pauseMusic();
     else playMusic();
+  });
+
+  const volumeSlider = document.getElementById('volume-slider');
+  volumeSlider.addEventListener('input', () => {
+    setVolume(parseInt(volumeSlider.value) / 100);
   });
 
   document.getElementById('back-btn').addEventListener('click', () => {
