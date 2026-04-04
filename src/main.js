@@ -5,7 +5,7 @@ import { loadCar } from './car/CarBuilder.js';
 import { TourSequencer } from './tour/TourSequencer.js';
 import { OverlayController } from './ui/overlay.js';
 import { initMusic, playMusic, pauseMusic, stopMusic, setVolume } from './audio/music.js';
-import { setVOMuted } from './audio/voiceover.js';
+import { setVOMuted, setVOVolume } from './audio/voiceover.js';
 
 let scene, camera, renderer, car, parts, tourSequencer, overlay;
 let autoRotate = true;
@@ -134,9 +134,14 @@ function setupEvents() {
     else playMusic();
   });
 
-  const volumeSlider = document.getElementById('volume-slider');
-  volumeSlider.addEventListener('input', () => {
-    setVolume(parseInt(volumeSlider.value) / 100);
+  const musicSlider = document.getElementById('music-slider');
+  musicSlider.addEventListener('input', () => {
+    setVolume(parseInt(musicSlider.value) / 100);
+  });
+
+  const voSlider = document.getElementById('vo-slider');
+  voSlider.addEventListener('input', () => {
+    setVOVolume(parseInt(voSlider.value) / 100);
   });
 
   document.getElementById('back-btn').addEventListener('click', () => {
@@ -158,11 +163,12 @@ function setupEvents() {
     voToggle.title = voMuted ? 'Voiceover off — click to enable' : 'Toggle voiceover narration';
   });
 
-  // Reading speed control
+  // Reading speed control — 0.5× = slower fallback, 1× = normal, 2× = faster fallback
+  // (When VO is active this only affects the safety-net muted-fallback duration)
   const speeds = [
-    { id: 'speed-slow',   multiplier: 1.5 },
+    { id: 'speed-half',   multiplier: 2.0 },
     { id: 'speed-normal', multiplier: 1.0 },
-    { id: 'speed-fast',   multiplier: 0.5 },
+    { id: 'speed-double', multiplier: 0.5 },
   ];
   speeds.forEach(({ id, multiplier }) => {
     document.getElementById(id).addEventListener('click', () => {
@@ -172,20 +178,14 @@ function setupEvents() {
     });
   });
 
-  // Auto / Step mode toggle
-  const modeAuto   = document.getElementById('mode-auto');
-  const modeManual = document.getElementById('mode-manual');
-
-  modeAuto.addEventListener('click', () => {
-    modeAuto.classList.add('active');
-    modeManual.classList.remove('active');
-    tourSequencer.setManual(false);
-  });
-
-  modeManual.addEventListener('click', () => {
-    modeManual.classList.add('active');
-    modeAuto.classList.remove('active');
-    tourSequencer.setManual(true);
+  // Autoplay toggle — highlighted = ON, faded = OFF
+  let _autoplay = true;
+  const autoplayToggle = document.getElementById('autoplay-toggle');
+  autoplayToggle.addEventListener('click', () => {
+    _autoplay = !_autoplay;
+    tourSequencer.setManual(!_autoplay);
+    autoplayToggle.classList.toggle('active', _autoplay);
+    autoplayToggle.title = _autoplay ? 'Autoplay enabled' : 'Autoplay disabled — use Next to advance';
   });
 
   document.getElementById('replay-btn').addEventListener('click', () => {

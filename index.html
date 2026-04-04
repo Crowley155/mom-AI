@@ -14,8 +14,10 @@
 
   <div id="music-bar">
     <button id="vo-toggle" class="music-bar-btn" title="Toggle voiceover narration">🔊</button>
+    <input id="vo-slider" type="range" min="0" max="100" value="85" title="Narrator volume" />
+    <span class="bar-divider">|</span>
     <span id="music-icon">♪</span>
-    <input id="volume-slider" type="range" min="0" max="100" value="30" title="Music volume" />
+    <input id="music-slider" type="range" min="0" max="100" value="30" title="Music volume" />
   </div>
 
   <div id="overlay">
@@ -40,14 +42,11 @@
         <button id="pause-btn" class="btn-icon" title="Pause">⏸</button>
         <span id="step-indicator">1 / 6</span>
         <button id="skip-btn" class="btn-icon" title="Next">⏭</button>
-        <div id="mode-bar">
-          <button id="mode-auto" class="mode-pill active" title="Slides advance automatically">▶ Auto</button>
-          <button id="mode-manual" class="mode-pill" title="You control each slide transition">⏸ Step</button>
-        </div>
+        <button id="autoplay-toggle" class="mode-pill active" title="Autoplay enabled">Autoplay</button>
         <div id="speed-bar">
-          <button id="speed-slow" class="speed-pill" title="More time to read each slide">🐢</button>
-          <button id="speed-normal" class="speed-pill active" title="Comfortable reading pace">▶</button>
-          <button id="speed-fast" class="speed-pill" title="Quick run-through">⚡</button>
+          <button id="speed-half"   class="speed-pill"        title="Half speed">0.5×</button>
+          <button id="speed-normal" class="speed-pill active"  title="Normal speed">1×</button>
+          <button id="speed-double" class="speed-pill"         title="Double speed">2×</button>
         </div>
       </div>
     </div>

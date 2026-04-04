@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { tourStepConfigs } from './steps.js';
 import { tourSteps } from '../ui/captions.js';
 import { createFailureAnimation, resetPart } from './failures.js';
-import { playVO, stopVO } from '../audio/voiceover.js';
+import { playVO, stopVO, isVOPlaying, waitForVOEnd } from '../audio/voiceover.js';
 
 export class TourSequencer {
   constructor(camera, carGroup, parts, overlayController, defaultLookAt) {
@@ -15,6 +15,7 @@ export class TourSequencer {
     this.isPaused = false;
     this.isManual = false;        // Step mode: user controls slide transitions
     this._waitingForNext = false; // true when paused mid-step awaiting user click
+    this._voWaiting = false;      // true when GSAP is paused waiting for VO to finish
     this.timeMultiplier = 1.0;    // 1 = Normal reading pace; >1 = slower; <1 = faster
     this.masterTimeline = null;
     this.defaultLookAt = defaultLookAt || new THREE.Vector3(0, 0.6, 0);
@@ -84,20 +85,36 @@ export class TourSequencer {
       },
     });
 
+    // ── Caption phase ─────────────────────────────────────────────────────────
     tl.call(() => {
-      if (isInternal) {
-        partGroup.visible = true;
-      }
+      if (isInternal) partGroup.visible = true;
       this.ghostNonHighlighted(config.partKey);
       this.overlay.showCaption(caption.partLabel, caption.teamName, caption.teamDesc);
       this.pulsePartEmissive(partGroup);
       playVO(`step-${index + 1}-caption`);
     }, [], '-=0.3');
 
-    // Caption reading time — base 12s at Normal pace, scales with timeMultiplier
+    // Fixed reading-time delay (always runs — guarantees advancement)
     tl.to({}, { duration: 12 * this.timeMultiplier });
 
+    // If VO is still playing after the delay, pause and wait for it
+    if (!this.isManual) {
+      tl.call(() => {
+        if (isVOPlaying()) {
+          this._voWaiting = true;
+          tl.pause();
+          waitForVOEnd(() => {
+            if (this.masterTimeline !== tl) return;
+            this._voWaiting = false;
+            if (!this.isPaused) tl.resume();
+          });
+        }
+      });
+    }
+
+    // ── Failure phase ─────────────────────────────────────────────────────────
     tl.call(() => {
+      stopVO();
       this.overlay.showFailure(caption.failureText);
       playVO(`step-${index + 1}-failure`);
     });
@@ -105,17 +122,29 @@ export class TourSequencer {
     const failAnim = createFailureAnimation(config.partKey, partGroup, this.carGroup);
     tl.add(failAnim.play(), '+=0.3');
 
+    // Fixed reading-time delay for failure text
+    tl.to({}, { duration: 8 * this.timeMultiplier });
+
     if (this.isManual) {
-      // Pause and wait for user to click Next/Skip
       tl.call(() => {
         this._waitingForNext = true;
         this.overlay.showNextCue();
         this.masterTimeline.pause();
-        // VO continues playing; user clicks Next when ready
-      }, [], '+=0.3');
+      });
     } else {
-      // Failure text reading time — base 8s at Normal pace
-      tl.to({}, { duration: 8 * this.timeMultiplier });
+      // If VO still playing after delay + animation, wait for it
+      tl.call(() => {
+        if (isVOPlaying()) {
+          this._voWaiting = true;
+          tl.pause();
+          waitForVOEnd(() => {
+            if (this.masterTimeline !== tl) return;
+            this._voWaiting = false;
+            if (!this.isPaused) tl.resume();
+          });
+        }
+      });
+
       tl.call(() => {
         stopVO();
         this.overlay.hideFailure();
@@ -270,16 +299,18 @@ export class TourSequencer {
   }
 
   pause() {
-    if (this.masterTimeline) {
+    this.isPaused = true;
+    // If waiting for VO, GSAP is already paused — just record user intent
+    if (this.masterTimeline && !this._voWaiting) {
       this.masterTimeline.pause();
-      this.isPaused = true;
     }
   }
 
   resume() {
-    if (this.masterTimeline) {
+    this.isPaused = false;
+    // Don't resume GSAP yet if we're still waiting for VO to finish
+    if (this.masterTimeline && !this._voWaiting) {
       this.masterTimeline.resume();
-      this.isPaused = false;
     }
   }
 
@@ -310,23 +341,21 @@ export class TourSequencer {
   }
 
   skipToNext() {
-    stopVO();
-    if (this.isManual) {
-      this._waitingForNext = false;
-      this.overlay.hideNextCue();
-      this.overlay.hideFailure();
-      this.overlay.hideCaption();
-      if (this.masterTimeline) this.masterTimeline.kill();
-      this.animateRestore(
-        tourStepConfigs[this.currentStep]?.partKey,
-        this.currentStep + 1
-      );
-    } else {
-      if (this.masterTimeline) this.masterTimeline.progress(1);
-    }
+    this._voWaiting = false;
+    this._waitingForNext = false;
+    stopVO(); // cancels VO callback so it won't try to resume after kill
+    this.overlay.hideNextCue();
+    this.overlay.hideFailure();
+    this.overlay.hideCaption();
+    if (this.masterTimeline) this.masterTimeline.kill();
+    this.animateRestore(
+      tourStepConfigs[this.currentStep]?.partKey,
+      this.currentStep + 1
+    );
   }
 
   skipToPrev() {
+    this._voWaiting = false;
     stopVO();
     const prevIndex = Math.max(0, this.currentStep - 1);
     if (this.masterTimeline) {
@@ -354,6 +383,7 @@ export class TourSequencer {
   }
 
   reset() {
+    this._voWaiting = false;
     stopVO();
     if (this.masterTimeline) {
       this.masterTimeline.kill();
