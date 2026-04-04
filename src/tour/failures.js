@@ -27,10 +27,10 @@ export function createFailureAnimation(partKey, partGroup, carGroup) {
 
   switch (partKey) {
     case 'engine': {
-      tl.to(partGroup.position, { y: partGroup.position.y + 0.5, duration: 0.5, ease: 'power2.out' })
-        .to(partGroup, { visible: true, duration: 0 }, 0)
-        .call(() => setGroupOpacity(partGroup, 0.2), [], 0.3)
-        .to(carGroup.position, { x: '+=0.03', yoyo: true, repeat: 6, duration: 0.1, ease: 'none' }, 0.5);
+      // Engine stays fully visible — it's the focus. Only shake the car to show the strain.
+      tl.to(partGroup.position, { y: partGroup.position.y + 0.3, duration: 0.4, ease: 'power2.out' })
+        .to(partGroup.position, { y: partGroup.position.y, duration: 0.4, ease: 'bounce.out' }, 0.4)
+        .to(carGroup.position, { x: '+=0.05', yoyo: true, repeat: 8, duration: 0.08, ease: 'none' }, 0.3);
       break;
     }
     case 'wheels': {

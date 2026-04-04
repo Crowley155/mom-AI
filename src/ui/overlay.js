@@ -125,7 +125,7 @@ export class OverlayController {
 
   showFailure(text) {
     this.failureText.textContent = text;
-    this._restorePos(this.failureBox, 'failureBox', { bottom: '5.5rem', right: '1.5rem' });
+    this._restorePos(this.failureBox, 'failureBox', { top: '3.5rem', right: '1.5rem' });
     this.showScreen(this.failureOverlay);
 
     gsap.fromTo(this.failureOverlay,

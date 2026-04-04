@@ -263,9 +263,9 @@ body {
 }
 
 #failure-box {
-  /* Fixed to bottom-right, clear of the caption and controls */
+  /* Fixed to top-right, below the music bar */
   position: fixed;
-  bottom: 5.5rem;
+  top: 3.5rem;
   right: 1.5rem;
   max-width: min(420px, calc(100vw - 3rem));
   padding: 1.2rem 2rem 1.2rem 1.6rem;
@@ -385,7 +385,7 @@ body {
 
   #failure-box {
     max-width: calc(100vw - 3rem);
-    bottom: 6rem;
+    top: 3.5rem;
     right: 1rem;
   }
 
