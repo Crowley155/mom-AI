@@ -12,8 +12,9 @@ export class TourSequencer {
     this.overlay = overlayController;
     this.currentStep = 0;
     this.isPaused = false;
-    this.isManual = false;      // Step mode: user controls slide transitions
+    this.isManual = false;        // Step mode: user controls slide transitions
     this._waitingForNext = false; // true when paused mid-step awaiting user click
+    this.timeMultiplier = 1.0;    // 1 = Normal reading pace; >1 = slower; <1 = faster
     this.masterTimeline = null;
     this.defaultLookAt = defaultLookAt || new THREE.Vector3(0, 0.6, 0);
     this.currentLookAt = this.defaultLookAt.clone();
@@ -91,7 +92,8 @@ export class TourSequencer {
       this.pulsePartEmissive(partGroup);
     }, [], '-=0.3');
 
-    tl.to({}, { duration: 1.8 });
+    // Caption reading time — base 12s at Normal pace, scales with timeMultiplier
+    tl.to({}, { duration: 12 * this.timeMultiplier });
 
     tl.call(() => {
       this.overlay.showFailure(caption.failureText);
@@ -108,8 +110,8 @@ export class TourSequencer {
         this.masterTimeline.pause();
       }, [], '+=0.3');
     } else {
-      // Auto-advance after display time
-      tl.to({}, { duration: 1.8 });
+      // Failure text reading time — base 8s at Normal pace
+      tl.to({}, { duration: 8 * this.timeMultiplier });
       tl.call(() => {
         this.overlay.hideFailure();
         this.overlay.hideCaption();
@@ -279,6 +281,16 @@ export class TourSequencer {
     if (this.isPaused) this.resume();
     else this.pause();
     return this.isPaused;
+  }
+
+  /**
+   * Set reading pace multiplier.
+   * 1.0 = Normal (12s caption / 8s failure)
+   * 1.5 = Slow    (18s / 12s)
+   * 0.5 = Fast    ( 6s /  4s)
+   */
+  setSpeed(multiplier) {
+    this.timeMultiplier = multiplier;
   }
 
   /** Switch between Auto (false) and Step/Manual (true) modes. */

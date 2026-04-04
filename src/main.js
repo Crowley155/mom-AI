@@ -146,6 +146,20 @@ function setupEvents() {
     tourSequencer.skipToNext();
   });
 
+  // Reading speed control
+  const speeds = [
+    { id: 'speed-slow',   multiplier: 1.5 },
+    { id: 'speed-normal', multiplier: 1.0 },
+    { id: 'speed-fast',   multiplier: 0.5 },
+  ];
+  speeds.forEach(({ id, multiplier }) => {
+    document.getElementById(id).addEventListener('click', () => {
+      speeds.forEach(s => document.getElementById(s.id).classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      tourSequencer.setSpeed(multiplier);
+    });
+  });
+
   // Auto / Step mode toggle
   const modeAuto   = document.getElementById('mode-auto');
   const modeManual = document.getElementById('mode-manual');
