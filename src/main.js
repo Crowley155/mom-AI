@@ -16,12 +16,12 @@ async function init() {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(
-    45,
+    getFov(),
     window.innerWidth / window.innerHeight,
     0.1,
     500
   );
-  camera.position.set(5, 3, 5);
+  camera.position.set(5.5, 3.2, 5.5);
   camera.lookAt(lookAtTarget);
 
   renderer = new THREE.WebGLRenderer({
@@ -170,18 +170,26 @@ function animate() {
   const elapsed = clock.getElapsedTime();
 
   if (autoRotate) {
-    const radius = 6;
+    const radius = 7;
     camera.position.x = Math.cos(elapsed * 0.12) * radius;
     camera.position.z = Math.sin(elapsed * 0.12) * radius;
-    camera.position.y = 2.5 + Math.sin(elapsed * 0.2) * 0.3;
+    camera.position.y = 3.0 + Math.sin(elapsed * 0.2) * 0.3;
     camera.lookAt(lookAtTarget);
   }
 
   renderer.render(scene, camera);
 }
 
+/** Returns a wider FOV on narrow screens so the full car stays in frame */
+function getFov() {
+  if (window.innerWidth < 480) return 70;
+  if (window.innerWidth < 768) return 60;
+  return 50;
+}
+
 function onResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
+  camera.fov = getFov();
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
