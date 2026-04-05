@@ -1,20 +1,24 @@
 import * as THREE from 'three';
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import gsap from 'gsap';
 import { loadCar } from './car/CarBuilder.js';
 import { TourSequencer } from './tour/TourSequencer.js';
 import { OverlayController } from './ui/overlay.js';
 import { initMusic, playMusic, pauseMusic, stopMusic, setVolume } from './audio/music.js';
 import { setVOMuted, setVOVolume } from './audio/voiceover.js';
+import { createGrass } from './scene/grass.js';
+import { createParticles } from './scene/particles.js';
+import { createTrees } from './scene/trees.js';
 
 let scene, camera, renderer, car, parts, tourSequencer, overlay;
 let autoRotate = true;
 let envMap = null;
+let grassCtrl, particleCtrl;
 const clock = new THREE.Clock();
 const lookAtTarget = new THREE.Vector3(0, 0.6, 0);
 
 async function init() {
   scene = new THREE.Scene();
+  // no fog — sunny day
 
   camera = new THREE.PerspectiveCamera(
     getFov(),
@@ -33,10 +37,10 @@ async function init() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMapping = THREE.LinearToneMapping;
+  renderer.toneMappingExposure = 1.0;
 
-  await setupEnvironment();
+  setupEnvironment();
   setupLights();
   setupGround();
 
@@ -56,21 +60,52 @@ async function init() {
 }
 
 function setupEnvironment() {
-  return new Promise((resolve) => {
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    pmremGenerator.compileEquirectangularShader();
+  const pmrem = new THREE.PMREMGenerator(renderer);
 
-    new RGBELoader().load(`${import.meta.env.BASE_URL}hdri/environment.hdr`, (texture) => {
-      envMap = pmremGenerator.fromEquirectangular(texture).texture;
-      scene.environment = envMap;
-      scene.background = envMap;
-      scene.backgroundBlurriness = 0.02;
-      scene.backgroundIntensity = 0.8;
-      texture.dispose();
-      pmremGenerator.dispose();
-      resolve();
-    });
+  const envScene = new THREE.Scene();
+  envScene.background = new THREE.Color(0x88ccee);
+  envScene.add(new THREE.HemisphereLight(0x88ccee, 0x44aa44, 1.0));
+  const sunForEnv = new THREE.DirectionalLight(0xffffee, 2.0);
+  sunForEnv.position.set(1, 1, 1);
+  envScene.add(sunForEnv);
+
+  envMap = pmrem.fromScene(envScene).texture;
+  scene.environment = envMap;
+  scene.environmentIntensity = 0.6;
+  scene.background = new THREE.Color(0x87ceeb);
+
+  pmrem.dispose();
+  buildSkyDome();
+}
+
+function buildSkyDome() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 4;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0.0,  '#3a8ec8');
+  grad.addColorStop(0.15, '#4a9ed5');
+  grad.addColorStop(0.30, '#5aade0');
+  grad.addColorStop(0.45, '#6ab8e5');
+  grad.addColorStop(0.55, '#7ec5ea');
+  grad.addColorStop(0.65, '#96d2ee');
+  grad.addColorStop(0.78, '#b8e0ec');
+  grad.addColorStop(0.88, '#c8e8d8');
+  grad.addColorStop(1.0,  '#9ecc8e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 4, 256);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.flipY = false;
+  const geo = new THREE.SphereGeometry(200, 32, 16);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    side: THREE.BackSide,
+    depthWrite: false,
   });
+  const dome = new THREE.Mesh(geo, mat);
+  scene.add(dome);
 }
 
 function setupLights() {
@@ -91,14 +126,35 @@ function setupLights() {
   const fill = new THREE.DirectionalLight(0x8ec8f0, 0.5);
   fill.position.set(-4, 3, -3);
   scene.add(fill);
+
+  const hemi = new THREE.HemisphereLight(0x87ceeb, 0x3a6b35, 0.3);
+  scene.add(hemi);
 }
 
 function setupGround() {
-  const groundGeo = new THREE.CircleGeometry(20, 64);
-  const groundMat = new THREE.MeshStandardMaterial({
-    color: 0x3a6b35,
-    roughness: 0.95,
-    metalness: 0.0,
+  const RADIUS = 20;
+  const SEGS   = 64;
+  const groundGeo = new THREE.CircleGeometry(RADIUS, SEGS);
+
+  const grassR = 0.22, grassG = 0.75, grassB = 0.10;
+  const horizR = 0.62, horizG = 0.80, horizB = 0.55;
+
+  const count  = groundGeo.attributes.position.count;
+  const colors = new Float32Array(count * 3);
+  const pos    = groundGeo.attributes.position;
+  for (let i = 0; i < count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const d = Math.sqrt(x * x + y * y) / RADIUS;
+    const t = Math.pow(Math.max(0, (d - 0.5)) / 0.5, 2.0);
+    colors[i * 3]     = grassR + (horizR - grassR) * t;
+    colors[i * 3 + 1] = grassG + (horizG - grassG) * t;
+    colors[i * 3 + 2] = grassB + (horizB - grassB) * t;
+  }
+  groundGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+  const groundMat = new THREE.MeshLambertMaterial({
+    vertexColors: true,
   });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
@@ -117,6 +173,10 @@ function setupGround() {
   contactShadow.rotation.x = -Math.PI / 2;
   contactShadow.position.set(0, 0.005, 0);
   scene.add(contactShadow);
+
+  grassCtrl    = createGrass(scene);
+  particleCtrl = createParticles(scene);
+  createTrees(scene);
 }
 
 function setupEvents() {
@@ -178,6 +238,20 @@ function setupEvents() {
     });
   });
 
+  // Text size toggle — Normal / Large
+  const textSizes = [
+    { id: 'text-normal', cls: false },
+    { id: 'text-large',  cls: true  },
+  ];
+  textSizes.forEach(({ id, cls }) => {
+    document.getElementById(id).addEventListener('click', () => {
+      textSizes.forEach(s => document.getElementById(s.id).classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.body.classList.toggle('text-large', cls);
+      overlay.clearSavedSizes();
+    });
+  });
+
   // Autoplay toggle — highlighted = ON, faded = OFF
   let _autoplay = true;
   const autoplayToggle = document.getElementById('autoplay-toggle');
@@ -218,6 +292,9 @@ function animate() {
     camera.position.y = 3.0 + Math.sin(elapsed * 0.2) * 0.3;
     camera.lookAt(lookAtTarget);
   }
+
+  if (grassCtrl)    grassCtrl.update(elapsed);
+  if (particleCtrl) particleCtrl.update(elapsed);
 
   renderer.render(scene, camera);
 }

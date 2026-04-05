@@ -32,9 +32,11 @@
     <div id="tour-hud" class="screen">
       <!-- caption-box is now position:fixed/draggable — kept inside overlay for show/hide -->
       <div id="caption-box">
+        <button class="collapse-toggle" title="Collapse">&#x25B4;</button>
         <span id="part-label" class="part-label"></span>
         <h2 id="team-name" class="team-name"></h2>
         <p id="team-desc" class="team-desc"></p>
+        <div class="resize-handle"></div>
       </div>
       <div id="progress-bar"><div id="progress-fill"></div></div>
       <div id="tour-controls">
@@ -48,13 +50,19 @@
           <button id="speed-normal" class="speed-pill active"  title="Normal speed">1×</button>
           <button id="speed-double" class="speed-pill"         title="Double speed">2×</button>
         </div>
+        <div id="text-size-bar">
+          <button id="text-normal" class="speed-pill active" title="Normal text">A</button>
+          <button id="text-large"  class="speed-pill"        title="Large text">A+</button>
+        </div>
       </div>
     </div>
 
     <!-- Failure overlay -->
     <div id="failure-overlay" class="screen">
       <div id="failure-box">
+        <button class="collapse-toggle" title="Collapse">&#x25B4;</button>
         <p id="failure-text" class="failure-text"></p>
+        <div class="resize-handle"></div>
       </div>
     </div>
 

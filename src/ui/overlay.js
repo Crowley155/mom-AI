@@ -1,9 +1,18 @@
 import gsap from 'gsap';
 
-// Persists drag positions across slides for the session
 const _savedPos = {
-  captionBox: null,  // { left, top } strings or null → use CSS default
+  captionBox: null,
   failureBox: null,
+};
+
+const _savedSize = {
+  captionBox: null,
+  failureBox: null,
+};
+
+const _collapsed = {
+  captionBox: false,
+  failureBox: false,
 };
 
 export class OverlayController {
@@ -27,6 +36,10 @@ export class OverlayController {
 
     this._initDrag(this.captionBox, 'captionBox');
     this._initDrag(this.failureBox, 'failureBox');
+    this._initResize(this.captionBox, 'captionBox', 220, 100);
+    this._initResize(this.failureBox, 'failureBox', 220, 80);
+    this._initCollapse(this.captionBox, 'captionBox');
+    this._initCollapse(this.failureBox, 'failureBox');
   }
 
   // ─── Drag support ─────────────────────────────────────────────────────────
@@ -40,9 +53,12 @@ export class OverlayController {
     if (!el) return;
     let sx = 0, sy = 0, ox = 0, oy = 0, active = false;
 
+    const isHandle = (target) =>
+      target.classList?.contains('resize-handle') ||
+      target.classList?.contains('collapse-toggle');
+
     const begin = (cx, cy) => {
       const r = el.getBoundingClientRect();
-      // Detach from CSS anchor (bottom/right) and use explicit top/left
       el.style.bottom = 'auto';
       el.style.right  = 'auto';
       el.style.left   = r.left + 'px';
@@ -68,16 +84,111 @@ export class OverlayController {
       _savedPos[posKey] = { left: el.style.left, top: el.style.top };
     };
 
-    el.addEventListener('mousedown',  (e) => { e.preventDefault(); begin(e.clientX, e.clientY); });
+    el.addEventListener('mousedown', (e) => {
+      if (isHandle(e.target)) return;
+      e.preventDefault();
+      begin(e.clientX, e.clientY);
+    });
     window.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
     window.addEventListener('mouseup', end);
 
-    el.addEventListener('touchstart', (e) => { const t = e.touches[0]; begin(t.clientX, t.clientY); }, { passive: true });
+    el.addEventListener('touchstart', (e) => {
+      if (isHandle(e.target)) return;
+      const t = e.touches[0];
+      begin(t.clientX, t.clientY);
+    }, { passive: true });
     window.addEventListener('touchmove', (e) => { const t = e.touches[0]; move(t.clientX, t.clientY); }, { passive: true });
     window.addEventListener('touchend', end);
   }
 
-  /** Applies a saved drag position or falls back to CSS anchors. */
+  _initResize(el, sizeKey, minW, minH) {
+    if (!el) return;
+    const handle = el.querySelector('.resize-handle');
+    if (!handle) return;
+
+    let active = false, sx = 0, sy = 0, ow = 0, oh = 0;
+
+    const begin = (cx, cy) => {
+      ow = el.offsetWidth;
+      oh = el.offsetHeight;
+      sx = cx;
+      sy = cy;
+      active = true;
+    };
+
+    const move = (cx, cy) => {
+      if (!active) return;
+      const nw = Math.max(minW, Math.min(window.innerWidth - el.offsetLeft, ow + (cx - sx)));
+      const nh = Math.max(minH, Math.min(window.innerHeight - el.offsetTop, oh + (cy - sy)));
+      el.style.width  = nw + 'px';
+      el.style.height = nh + 'px';
+      el.style.maxWidth = 'none';
+    };
+
+    const end = () => {
+      if (!active) return;
+      active = false;
+      _savedSize[sizeKey] = { width: el.style.width, height: el.style.height };
+    };
+
+    handle.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      begin(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
+    window.addEventListener('mouseup', end);
+
+    handle.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      const t = e.touches[0];
+      begin(t.clientX, t.clientY);
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => { const t = e.touches[0]; move(t.clientX, t.clientY); }, { passive: true });
+    window.addEventListener('touchend', end);
+  }
+
+  _initCollapse(el, key) {
+    if (!el) return;
+    const btn = el.querySelector('.collapse-toggle');
+    if (!btn) return;
+
+    btn.addEventListener('mousedown', (e) => e.stopPropagation());
+    btn.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _collapsed[key] = !_collapsed[key];
+      this._applyCollapsed(el, key);
+    });
+  }
+
+  _applyCollapsed(el, key) {
+    const isCollapsed = _collapsed[key];
+    el.classList.toggle('collapsed', isCollapsed);
+    const btn = el.querySelector('.collapse-toggle');
+    if (btn) {
+      btn.title = isCollapsed ? 'Expand' : 'Collapse';
+    }
+    if (isCollapsed) {
+      el.style.height = '';
+      el.style.maxWidth = '';
+    }
+  }
+
+  _restoreSize(el, sizeKey) {
+    const saved = _savedSize[sizeKey];
+    if (saved) {
+      el.style.width    = saved.width;
+      el.style.height   = saved.height;
+      el.style.maxWidth = 'none';
+    } else {
+      el.style.width    = '';
+      el.style.height   = '';
+      el.style.maxWidth = '';
+    }
+  }
+
   _restorePos(el, posKey, defaults = {}) {
     const saved = _savedPos[posKey];
     if (saved) {
@@ -110,6 +221,8 @@ export class OverlayController {
     this.teamDesc.textContent  = teamDesc;
 
     this._restorePos(this.captionBox, 'captionBox', { bottom: '5.5rem', left: '1.5rem' });
+    this._restoreSize(this.captionBox, 'captionBox');
+    this._applyCollapsed(this.captionBox, 'captionBox');
 
     gsap.fromTo(this.captionBox,
       { opacity: 0, x: -20 },
@@ -126,6 +239,8 @@ export class OverlayController {
   showFailure(text) {
     this.failureText.textContent = text;
     this._restorePos(this.failureBox, 'failureBox', { top: '3.5rem', right: '1.5rem' });
+    this._restoreSize(this.failureBox, 'failureBox');
+    this._applyCollapsed(this.failureBox, 'failureBox');
     this.showScreen(this.failureOverlay);
 
     gsap.fromTo(this.failureOverlay,
@@ -193,11 +308,21 @@ export class OverlayController {
     this.pauseBtn.title       = isPaused ? 'Resume' : 'Pause';
   }
 
-  /** Show/hide the pause button (irrelevant in Step/Manual mode). */
   setPauseVisible(visible) {
     if (this.pauseBtn) {
       this.pauseBtn.style.display      = visible ? 'flex' : 'none';
       this.pauseBtn.style.pointerEvents = visible ? 'all'  : 'none';
     }
+  }
+
+  clearSavedSizes() {
+    _savedSize.captionBox = null;
+    _savedSize.failureBox = null;
+    [this.captionBox, this.failureBox].forEach((el) => {
+      if (!el) return;
+      el.style.width    = '';
+      el.style.height   = '';
+      el.style.maxWidth = '';
+    });
   }
 }
