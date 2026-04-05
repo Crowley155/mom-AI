@@ -20,24 +20,23 @@ export function createTransmission(envMap) {
     envMapIntensity: 0.9,
   });
 
-  const housing = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.24, 0.28, 2, 2, 2), mat);
-  housing.position.set(0.25, 0.35, 0);
+  const housing = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.20, 0.24, 2, 2, 2), mat);
+  housing.position.set(0, 0.15, 0.10);
   group.add(housing);
 
-  const bellhousing = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.12, 12), mat.clone());
-  bellhousing.rotation.z = Math.PI / 2;
-  bellhousing.position.set(0.48, 0.35, 0);
+  const bellhousing = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.08, 0.10, 12), mat.clone());
+  bellhousing.rotation.x = Math.PI / 2;
+  bellhousing.position.set(0, 0.15, 0.30);
   group.add(bellhousing);
 
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 10), metalMat);
-  shaft.rotation.z = Math.PI / 2;
-  shaft.position.set(-0.1, 0.30, 0);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.020, 0.020, 0.6, 10), metalMat);
+  shaft.rotation.x = Math.PI / 2;
+  shaft.position.set(0, 0.12, -0.15);
   group.add(shaft);
 
   for (let i = 0; i < 3; i++) {
-    const gear = new THREE.Mesh(new THREE.TorusGeometry(0.06 + i * 0.012, 0.015, 8, 20), metalMat.clone());
-    gear.rotation.y = Math.PI / 2;
-    gear.position.set(0.12 + i * 0.1, 0.35, 0);
+    const gear = new THREE.Mesh(new THREE.TorusGeometry(0.05 + i * 0.010, 0.012, 8, 20), metalMat.clone());
+    gear.position.set(0, 0.15, 0.10 + i * 0.1);
     group.add(gear);
   }
 

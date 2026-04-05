@@ -63,7 +63,8 @@ export function createEngine(envMap) {
   belt.position.set(0, -0.05, 0.26);
   group.add(belt);
 
-  group.position.set(0.8, 0.5, 0);
-  group.userData.originalY = 0.5;
+  group.scale.setScalar(0.55);
+  group.position.set(0, 0.30, 0.85);
+  group.userData.originalY = 0.30;
   return group;
 }

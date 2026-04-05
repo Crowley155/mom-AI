@@ -8,13 +8,14 @@ import { setVOMuted, setVOVolume } from './audio/voiceover.js';
 import { createGrass } from './scene/grass.js';
 import { createParticles } from './scene/particles.js';
 import { createTrees } from './scene/trees.js';
+import { runSceneAudit } from './diagnostics/sceneAudit.js';
 
 let scene, camera, renderer, car, parts, tourSequencer, overlay;
 let autoRotate = true;
 let envMap = null;
 let grassCtrl, particleCtrl;
 const clock = new THREE.Clock();
-const lookAtTarget = new THREE.Vector3(0, 0.6, 0);
+const lookAtTarget = new THREE.Vector3(0, 0.25, 0);
 
 async function init() {
   scene = new THREE.Scene();
@@ -26,7 +27,7 @@ async function init() {
     0.1,
     500
   );
-  camera.position.set(5.5, 3.2, 5.5);
+  camera.position.set(2.5, 1.2, 2.5);
   camera.lookAt(lookAtTarget);
 
   renderer = new THREE.WebGLRenderer({
@@ -48,6 +49,10 @@ async function init() {
   car = result.car;
   parts = result.parts;
   scene.add(car);
+
+  if (new URLSearchParams(window.location.search).has('qa')) {
+    runSceneAudit(scene, car, parts, camera);
+  }
 
   overlay = new OverlayController();
   tourSequencer = new TourSequencer(camera, car, parts, overlay, lookAtTarget);
@@ -158,21 +163,9 @@ function setupGround() {
   });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.01;
+  ground.position.y = 0;
   ground.receiveShadow = true;
   scene.add(ground);
-
-  const shadowGeo = new THREE.PlaneGeometry(3.2, 1.4);
-  const shadowMat = new THREE.MeshBasicMaterial({
-    color: 0x000000,
-    transparent: true,
-    opacity: 0.25,
-    depthWrite: false,
-  });
-  const contactShadow = new THREE.Mesh(shadowGeo, shadowMat);
-  contactShadow.rotation.x = -Math.PI / 2;
-  contactShadow.position.set(0, 0.005, 0);
-  scene.add(contactShadow);
 
   grassCtrl    = createGrass(scene);
   particleCtrl = createParticles(scene);
@@ -269,7 +262,7 @@ function setupEvents() {
     autoRotate = false;
 
     gsap.to(camera.position, {
-      x: 5, y: 3, z: 5,
+      x: 2.5, y: 1.2, z: 2.5,
       duration: 1.2,
       ease: 'power2.inOut',
       onUpdate: () => camera.lookAt(lookAtTarget),
@@ -286,10 +279,10 @@ function animate() {
   const elapsed = clock.getElapsedTime();
 
   if (autoRotate) {
-    const radius = 7;
+    const radius = 3.5;
     camera.position.x = Math.cos(elapsed * 0.12) * radius;
     camera.position.z = Math.sin(elapsed * 0.12) * radius;
-    camera.position.y = 3.0 + Math.sin(elapsed * 0.2) * 0.3;
+    camera.position.y = 1.0 + Math.sin(elapsed * 0.2) * 0.15;
     camera.lookAt(lookAtTarget);
   }
 

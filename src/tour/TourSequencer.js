@@ -4,6 +4,7 @@ import { tourStepConfigs } from './steps.js';
 import { tourSteps } from '../ui/captions.js';
 import { createFailureAnimation, resetPart } from './failures.js';
 import { playVO, stopVO, isVOPlaying, waitForVOEnd } from '../audio/voiceover.js';
+import { createWheelSpinner } from './wheelSpin.js';
 
 export class TourSequencer {
   constructor(camera, carGroup, parts, overlayController, defaultLookAt) {
@@ -59,11 +60,16 @@ export class TourSequencer {
     this.currentStep = index;
     const config = tourStepConfigs[index];
     const caption = tourSteps[index];
-    const partGroup = this.parts[config.partKey];
 
     this.overlay.updateStep(index, tourStepConfigs.length);
     this.overlay.hideFailure();
 
+    if (config.partKey === 'intro') {
+      this._runIntro(index, config, caption);
+      return;
+    }
+
+    const partGroup = this.parts[config.partKey];
     const isInternal = ['engine', 'steering', 'fuel', 'transmission'].includes(config.partKey);
 
     const tl = gsap.timeline({
@@ -119,7 +125,7 @@ export class TourSequencer {
       playVO(`step-${index + 1}-failure`);
     });
 
-    const failAnim = createFailureAnimation(config.partKey, partGroup, this.carGroup);
+    const failAnim = createFailureAnimation(config.partKey, partGroup, this.carGroup, this.camera, this.parts.wheels);
     tl.add(failAnim.play(), '+=0.3');
 
     // Fixed reading-time delay for failure text
@@ -153,12 +159,76 @@ export class TourSequencer {
     }
   }
 
+  _runIntro(index, config, caption) {
+    const ORBIT_RADIUS = 3.0;
+    const ORBIT_HEIGHT = 1.2;
+    const ORBIT_DURATION = 30;
+    const center = config.lookAt.clone();
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        stopVO();
+        this.overlay.hideCaption();
+        this.runStep(index + 1);
+      },
+    });
+    this.masterTimeline = tl;
+
+    // Show the caption immediately
+    tl.call(() => {
+      this.overlay.showCaption(caption.partLabel, caption.teamName, caption.teamDesc);
+      playVO(`step-${index + 1}-caption`);
+    }, [], 0);
+
+    // 360-degree orbit around the car
+    const orbit = { angle: 0 };
+    tl.to(orbit, {
+      angle: Math.PI * 2,
+      duration: ORBIT_DURATION * this.timeMultiplier,
+      ease: 'none',
+      onUpdate: () => {
+        this.camera.position.x = center.x + Math.cos(orbit.angle) * ORBIT_RADIUS;
+        this.camera.position.z = center.z + Math.sin(orbit.angle) * ORBIT_RADIUS;
+        this.camera.position.y = ORBIT_HEIGHT + Math.sin(orbit.angle * 2) * 0.15;
+        this.camera.lookAt(center);
+        this.currentLookAt.copy(center);
+      },
+    }, 0);
+
+    // If VO is still playing after the orbit, wait for it
+    if (!this.isManual) {
+      tl.call(() => {
+        if (isVOPlaying()) {
+          this._voWaiting = true;
+          tl.pause();
+          waitForVOEnd(() => {
+            if (this.masterTimeline !== tl) return;
+            this._voWaiting = false;
+            if (!this.isPaused) tl.resume();
+          });
+        }
+      });
+    }
+
+    if (this.isManual) {
+      tl.call(() => {
+        this._waitingForNext = true;
+        this.overlay.showNextCue();
+        this.masterTimeline.pause();
+      });
+    }
+  }
+
   ghostNonHighlighted(activePartKey) {
     Object.entries(this.parts).forEach(([key, group]) => {
       if (key === activePartKey) return;
       if (!group.visible) return;
       group.traverse((child) => {
         if (!child.isMesh) return;
+        if (child.userData.isDecal) {
+          child.visible = false;
+          return;
+        }
         if (!this._ghostMats.has(child)) {
           const ghost = child.material.clone();
           ghost.transparent = true;
@@ -175,7 +245,12 @@ export class TourSequencer {
   restoreAllOpacity() {
     Object.values(this.parts).forEach((group) => {
       group.traverse((child) => {
-        if (child.isMesh && this.originalMaterials.has(child)) {
+        if (!child.isMesh) return;
+        if (child.userData.isDecal) {
+          child.visible = true;
+          return;
+        }
+        if (this.originalMaterials.has(child)) {
           child.material = this.originalMaterials.get(child);
         }
       });
@@ -263,7 +338,7 @@ export class TourSequencer {
     const tl = gsap.timeline();
 
     tl.to(this.camera.position, {
-      x: 5, y: 2.5, z: 5,
+      x: 3.5, y: 1.5, z: 3.5,
       duration: 2.0,
       ease: 'power2.inOut',
       onUpdate: () => {
@@ -284,10 +359,14 @@ export class TourSequencer {
       });
     });
 
+    const spinner = createWheelSpinner(this.parts.wheels);
+    spinner.reset(this.carGroup.position.z);
+
     tl.to(this.carGroup.position, {
-      x: 8,
+      z: 8,
       duration: 3.5,
       ease: 'power2.in',
+      onUpdate: () => spinner.update(this.carGroup.position.z),
     }, 2.5);
 
     tl.call(() => {

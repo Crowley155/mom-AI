@@ -25,8 +25,8 @@ export function createSteering(envMap) {
     new THREE.CylinderGeometry(0.025, 0.035, columnHeight, 12),
     mat
   );
-  column.position.set(0.15, 0.7, 0.12);
-  column.rotation.z = Math.PI * 0.2;
+  column.position.set(0, 0.35, 0.35);
+  column.rotation.x = -Math.PI * 0.15;
   group.add(column);
 
   const jointGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.02, 12);
@@ -63,6 +63,7 @@ export function createSteering(envMap) {
     wheelAssembly.add(spoke);
   }
 
+  group.scale.setScalar(0.8);
   group.userData.originalY = 0;
   return group;
 }
