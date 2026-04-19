@@ -255,6 +255,12 @@ export class TourSequencer {
 
     const tl = gsap.timeline({
       onComplete: () => {
+        // Restore body mesh visibility before fullRestore repositions them
+        if (partKey === 'body') {
+          this.parts.body.traverse((c) => {
+            if (c.isMesh) c.visible = true;
+          });
+        }
         this.fullRestore(partKey);
         this.restoreAllOpacity();
         if (isInternal) {
@@ -314,6 +320,13 @@ export class TourSequencer {
       y: this.savedCarRot.y,
       z: this.savedCarRot.z,
     });
+
+    // Restore mesh visibility (body explosion hides them)
+    if (this.parts[partKey]) {
+      this.parts[partKey].traverse((c) => {
+        if (c.isMesh) c.visible = true;
+      });
+    }
 
     const saved = this.savedPartStates[partKey];
     if (saved) {

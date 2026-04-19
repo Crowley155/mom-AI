@@ -1,7 +1,10 @@
 import gsap from 'gsap';
+import * as THREE from 'three';
 import { createWheelSpinner } from './wheelSpin.js';
 
 const ghostCache = new Map();
+const _vec3A = new THREE.Vector3();
+const _vec3B = new THREE.Vector3();
 
 function getGhostMaterial(mesh) {
   if (!ghostCache.has(mesh)) {
@@ -68,31 +71,53 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
       break;
     }
     case 'wheels': {
-      // Collect wheel groups
+      // Get into wheelPivot to find individual wheel nodes
+      const wheelPivot = partGroup.children.find((c) => c.name === 'wheelPivot');
+      const container = wheelPivot || partGroup;
+      const parentScale = wheelPivot ? wheelPivot.scale.y : 1;
+
       const wheels = [];
-      partGroup.children.forEach((child) => {
-        if (child.type === 'Group') wheels.push(child);
+      container.children.forEach((child) => {
+        if (child.type === 'Group' && child.name && child.name.startsWith('Wheel')) {
+          wheels.push(child);
+        }
       });
+      // Fallback: any child Group that isn't the axle
+      if (wheels.length === 0) {
+        container.children.forEach((child) => {
+          if (child.type === 'Group' && child.name !== 'Axles') wheels.push(child);
+        });
+      }
 
-      // Wheels simply fall off — drop to ground with a slight outward wobble
+      // Ensure world matrices are current
+      carGroup.updateMatrixWorld(true);
+
       wheels.forEach((w, i) => {
+        w.getWorldPosition(_vec3A);
+        const currentWorldY = _vec3A.y;
+        // Target: wheel resting on ground (world y ≈ wheel radius)
+        const wheelRadius = 0.15;
+        const targetWorldY = wheelRadius;
+        const deltaLocal = (targetWorldY - currentWorldY) / parentScale;
+
         const xDir = w.position.x > 0 ? 1 : -1;
+
         tl.to(w.position, {
-          x: w.position.x + xDir * 0.4,
-          y: -0.35,
-          duration: 0.5,
+          x: w.position.x + xDir * 0.8,
+          y: w.position.y + deltaLocal,
+          duration: 0.6,
           ease: 'bounce.out',
-        }, i * 0.15);
-        // Tilt as they fall
+        }, i * 0.12);
+
         tl.to(w.rotation, {
-          x: w.rotation.x + 0.8,
-          z: w.rotation.z + xDir * 0.5,
-          duration: 0.5,
+          x: w.rotation.x + 1.2,
+          z: w.rotation.z + xDir * 0.6,
+          duration: 0.6,
           ease: 'power2.out',
-        }, i * 0.15);
+        }, i * 0.12);
       });
 
-      // Car sags slightly
+      // Car sags
       tl.to(carGroup.rotation, { z: -0.04, duration: 0.6, ease: 'power2.out' }, 0.3);
       tl.to(carGroup.rotation, { x: 0.02, duration: 0.6, ease: 'power2.out' }, 0.3);
 
@@ -184,7 +209,6 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
       break;
     }
     case 'body': {
-      // Show internal parts so the car isn't hollow when shell flies off
       const internalKeys = ['engine', 'steering', 'fuel', 'transmission'];
       if (allParts) {
         tl.call(() => {
@@ -210,28 +234,46 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
         meshes.push(child);
       });
 
-      // Panels explode off-screen — huge offsets so they leave the viewport entirely
-      const SCALE_COMP = 2.0;
+      // Ensure world matrices are current
+      carGroup.updateMatrixWorld(true);
+      carGroup.getWorldPosition(_vec3B);
+
       meshes.forEach((mesh, i) => {
-        const angle = (i / Math.max(meshes.length, 1)) * Math.PI * 2;
-        const xOff = Math.cos(angle) * 12 * SCALE_COMP;
-        const zOff = Math.sin(angle) * 12 * SCALE_COMP;
-        const yOff = (3 + Math.random() * 4) * SCALE_COMP;
+        mesh.getWorldPosition(_vec3A);
+
+        // Direction from car center to mesh in world space
+        const dir = _vec3A.clone().sub(_vec3B);
+        if (dir.lengthSq() < 0.001) dir.set(1, 0.5, 0);
+        dir.normalize();
+
+        // Target: 30 units away from car in world space, always above
+        const target = _vec3B.clone().add(dir.multiplyScalar(30));
+        target.y = Math.max(target.y, 8);
+
+        // Convert world-space target to mesh's parent's local space
+        mesh.parent.updateWorldMatrix(true, false);
+        mesh.parent.worldToLocal(target);
 
         tl.to(mesh.position, {
-          x: mesh.position.x + xOff,
-          y: mesh.position.y + yOff,
-          z: mesh.position.z + zOff,
+          x: target.x,
+          y: target.y,
+          z: target.z,
           duration: 0.8,
           ease: 'power3.out',
-        }, i * 0.04);
+        }, i * 0.03);
         tl.to(mesh.rotation, {
           x: (Math.random() - 0.5) * 3,
           z: (Math.random() - 0.5) * 3,
           duration: 0.8,
           ease: 'power2.out',
-        }, i * 0.04);
+        }, i * 0.03);
       });
+
+      // Insurance: hide meshes after animation so nothing lingers on screen
+      tl.call(() => {
+        meshes.forEach((m) => { m.visible = false; });
+      });
+
       break;
     }
   }
