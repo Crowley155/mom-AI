@@ -432,6 +432,16 @@ export class TourSequencer {
   }
 
   skipToNext() {
+    // If we're at a manual pause point, resume the timeline to advance
+    // to the next phase (caption → failure → restore) within the same step
+    if (this._waitingForNext && this.masterTimeline) {
+      this._waitingForNext = false;
+      stopVO();
+      this.overlay.hideNextCue();
+      this.masterTimeline.resume();
+      return;
+    }
+
     this._voWaiting = false;
     this._waitingForNext = false;
     stopVO();
