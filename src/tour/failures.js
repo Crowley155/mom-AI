@@ -87,11 +87,26 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
 
       carGroup.updateMatrixWorld(true);
 
+      const _bb = new THREE.Box3();
+
       wheels.forEach((w, i) => {
-        w.getWorldPosition(_vec3A);
-        const currentWorldY = _vec3A.y;
-        // Ground level in local space (world y=0, solve for local y)
-        const groundLocalY = w.position.y + (0.0 - currentWorldY) / parentScale;
+        // Compute the wheel's world-space bounding box
+        _bb.setFromObject(w);
+        const bottomWorldY = _bb.min.y;
+        const halfHeight = (_bb.max.y - _bb.min.y) / 2;
+        // Thickness is the narrower horizontal extent
+        const extentX = _bb.max.x - _bb.min.x;
+        const extentZ = _bb.max.z - _bb.min.z;
+        const halfThickness = Math.min(extentX, extentZ) / 2;
+
+        // Fall target: wheel BOTTOM at ground (y=0)
+        // Move origin down by however far above ground the bottom currently is
+        const fallLocalY = w.position.y - bottomWorldY / parentScale;
+
+        // Flat target: after tipping 90°, the "height" is thickness instead of diameter
+        // Center drops from halfHeight to halfThickness above ground
+        const tipDropLocal = (halfHeight - halfThickness) / parentScale;
+        const flatLocalY = fallLocalY - tipDropLocal;
 
         const xDir = w.position.x > 0 ? 1 : -1;
         const stagger = i * 0.18;
@@ -103,17 +118,22 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
           ease: 'power1.out',
         }, stagger);
 
-        // Phase 2: Fall to ground (gravity — accelerating down)
+        // Phase 2: Fall to ground — bottom edge lands on y=0
         tl.to(w.position, {
-          y: groundLocalY,
+          y: fallLocalY,
           duration: 0.45,
           ease: 'power2.in',
         }, stagger + 0.15);
 
-        // Phase 3: Tip over and lay flat on the ground
-        // Rotate 90° around Z to tip from vertical to horizontal
+        // Phase 3: Tip over and settle flat
         tl.to(w.rotation, {
           z: w.rotation.z + (xDir * Math.PI / 2),
+          duration: 0.5,
+          ease: 'bounce.out',
+        }, stagger + 0.55);
+        // Lower center as wheel goes from tall→flat
+        tl.to(w.position, {
+          y: flatLocalY,
           duration: 0.5,
           ease: 'bounce.out',
         }, stagger + 0.55);
