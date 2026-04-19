@@ -71,55 +71,57 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
       break;
     }
     case 'wheels': {
-      // Get into wheelPivot to find individual wheel nodes
       const wheelPivot = partGroup.children.find((c) => c.name === 'wheelPivot');
       const container = wheelPivot || partGroup;
       const parentScale = wheelPivot ? wheelPivot.scale.y : 1;
 
       const wheels = [];
       container.children.forEach((child) => {
-        if (child.name && child.name.startsWith('Wheel')) {
-          wheels.push(child);
-        }
+        if (child.name && child.name.startsWith('Wheel')) wheels.push(child);
       });
-      // Fallback: any child that isn't the axle
       if (wheels.length === 0) {
         container.children.forEach((child) => {
           if (child.name !== 'Axles' && child.children.length > 0) wheels.push(child);
         });
       }
 
-      // Ensure world matrices are current
       carGroup.updateMatrixWorld(true);
 
       wheels.forEach((w, i) => {
         w.getWorldPosition(_vec3A);
         const currentWorldY = _vec3A.y;
-        // Target: wheel resting on ground (world y ≈ wheel radius)
-        const wheelRadius = 0.15;
-        const targetWorldY = wheelRadius;
-        const deltaLocal = (targetWorldY - currentWorldY) / parentScale;
+        // Ground level in local space (world y=0, solve for local y)
+        const groundLocalY = w.position.y + (0.0 - currentWorldY) / parentScale;
 
         const xDir = w.position.x > 0 ? 1 : -1;
+        const stagger = i * 0.18;
 
+        // Phase 1: Detach — slide outward from car
         tl.to(w.position, {
-          x: w.position.x + xDir * 0.8,
-          y: w.position.y + deltaLocal,
-          duration: 0.6,
-          ease: 'bounce.out',
-        }, i * 0.12);
+          x: w.position.x + xDir * 1.2,
+          duration: 0.4,
+          ease: 'power1.out',
+        }, stagger);
 
+        // Phase 2: Fall to ground (gravity — accelerating down)
+        tl.to(w.position, {
+          y: groundLocalY,
+          duration: 0.45,
+          ease: 'power2.in',
+        }, stagger + 0.15);
+
+        // Phase 3: Tip over and lay flat on the ground
+        // Rotate 90° around Z to tip from vertical to horizontal
         tl.to(w.rotation, {
-          x: w.rotation.x + 1.2,
-          z: w.rotation.z + xDir * 0.6,
-          duration: 0.6,
-          ease: 'power2.out',
-        }, i * 0.12);
+          z: w.rotation.z + (xDir * Math.PI / 2),
+          duration: 0.5,
+          ease: 'bounce.out',
+        }, stagger + 0.55);
       });
 
-      // Car sags
-      tl.to(carGroup.rotation, { z: -0.04, duration: 0.6, ease: 'power2.out' }, 0.3);
-      tl.to(carGroup.rotation, { x: 0.02, duration: 0.6, ease: 'power2.out' }, 0.3);
+      // Car sags without wheels
+      tl.to(carGroup.rotation, { z: -0.04, duration: 0.8, ease: 'power2.out' }, 0.3);
+      tl.to(carGroup.rotation, { x: 0.02, duration: 0.8, ease: 'power2.out' }, 0.3);
 
       break;
     }
