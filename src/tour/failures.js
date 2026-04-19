@@ -111,32 +111,24 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
         const xDir = w.position.x > 0 ? 1 : -1;
         const stagger = i * 0.18;
 
-        // Phase 1: Detach — slide outward from car
-        tl.to(w.position, {
-          x: w.position.x + xDir * 1.2,
-          duration: 0.4,
-          ease: 'power1.out',
-        }, stagger);
-
-        // Phase 2: Fall to ground — bottom edge lands on y=0
+        // Phase 1: Drop straight down to ground
         tl.to(w.position, {
           y: fallLocalY,
-          duration: 0.45,
+          duration: 0.5,
           ease: 'power2.in',
-        }, stagger + 0.15);
+        }, stagger);
 
-        // Phase 3: Tip over and settle flat
+        // Phase 2: Tip over and settle flat
         tl.to(w.rotation, {
           z: w.rotation.z + (xDir * Math.PI / 2),
           duration: 0.5,
           ease: 'bounce.out',
-        }, stagger + 0.55);
-        // Lower center as wheel goes from tall→flat
+        }, stagger + 0.45);
         tl.to(w.position, {
           y: flatLocalY,
           duration: 0.5,
           ease: 'bounce.out',
-        }, stagger + 0.55);
+        }, stagger + 0.45);
       });
 
       // Car sags without wheels
