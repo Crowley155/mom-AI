@@ -14,18 +14,6 @@ export const tourStepConfigs = [
     duration: 8,
   },
   {
-    partKey: 'wheels',
-    cameraPos: new THREE.Vector3(2.0, 0.6, 0.8),
-    lookAt: new THREE.Vector3(0.3, 0.15, 0),
-    duration: 8,
-  },
-  {
-    partKey: 'steering',
-    cameraPos: new THREE.Vector3(1.2, 0.8, 1.0),
-    lookAt: new THREE.Vector3(0, 0.35, 0.35),
-    duration: 8,
-  },
-  {
     partKey: 'fuel',
     cameraPos: new THREE.Vector3(1.5, 0.6, -1.8),
     lookAt: new THREE.Vector3(0, 0.15, -0.65),
@@ -38,9 +26,21 @@ export const tourStepConfigs = [
     duration: 8,
   },
   {
+    partKey: 'wheels',
+    cameraPos: new THREE.Vector3(2.0, 0.6, 0.8),
+    lookAt: new THREE.Vector3(0.3, 0.15, 0),
+    duration: 8,
+  },
+  {
     partKey: 'body',
     cameraPos: new THREE.Vector3(-2.5, 1.0, -2.0),
     lookAt: new THREE.Vector3(0, 0.3, 0),
+    duration: 8,
+  },
+  {
+    partKey: 'steering',
+    cameraPos: new THREE.Vector3(1.2, 0.8, 1.0),
+    lookAt: new THREE.Vector3(0, 0.35, 0.35),
     duration: 8,
   },
 ];
