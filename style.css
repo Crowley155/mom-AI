@@ -615,6 +615,25 @@ body.text-large .failure-text { font-size: 1.45rem; }
   body.text-large .failure-text { font-size: 1.15rem; }
 }
 
+/* ── Accessibility: reduced motion ────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Accessibility: focus-visible ─────────────── */
+.btn-primary:focus-visible,
+.btn-icon:focus-visible,
+.mode-pill:focus-visible,
+.speed-pill:focus-visible,
+.collapse-toggle:focus-visible {
+  outline: 2px solid #66bb6a;
+  outline-offset: 2px;
+}
+
 @media (max-width: 380px) {
   #caption-box,
   #failure-box {

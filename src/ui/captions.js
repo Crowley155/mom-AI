@@ -39,7 +39,7 @@ export const tourSteps = [
     partLabel: 'The Body & Frame',
     teamName: 'Grants and Capital Projects',
     teamDesc: 'The Mid-America West Sports Complex project, the Theatre in the Park renovation and the Administration Building remodel are just a few of the many projects JCPRD has completed. Finance staff that handle Grant and capital asset management provide the structural integrity that holds JCPRD\'s long-term future together.',
-    failureText: 'Without Grants, Capital Assets & Land Acquisitions, the district has no structural integrity. Short-term operations survive, but long-term investments collapse.',
+    failureText: 'Without Grants and Capital Projects, the district has no structural integrity. Short-term operations survive, but long-term investments collapse.',
   },
   {
     partKey: 'steering',

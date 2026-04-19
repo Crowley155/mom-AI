@@ -224,6 +224,7 @@ export class OverlayController {
     this._restoreSize(this.captionBox, 'captionBox');
     this._applyCollapsed(this.captionBox, 'captionBox');
 
+    this.captionBox.style.pointerEvents = 'all';
     gsap.fromTo(this.captionBox,
       { opacity: 0, x: -20 },
       { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out' }
@@ -231,7 +232,10 @@ export class OverlayController {
   }
 
   hideCaption() {
-    gsap.to(this.captionBox, { opacity: 0, duration: 0.3, ease: 'power2.in' });
+    gsap.to(this.captionBox, {
+      opacity: 0, duration: 0.3, ease: 'power2.in',
+      onComplete: () => { this.captionBox.style.pointerEvents = 'none'; },
+    });
   }
 
   // ─── Failure popup ────────────────────────────────────────────────────────
@@ -241,6 +245,7 @@ export class OverlayController {
     this._restorePos(this.failureBox, 'failureBox', { top: '3.5rem', right: '1.5rem' });
     this._restoreSize(this.failureBox, 'failureBox');
     this._applyCollapsed(this.failureBox, 'failureBox');
+    this.failureBox.style.pointerEvents = 'all';
     this.showScreen(this.failureOverlay);
 
     gsap.fromTo(this.failureOverlay,
@@ -258,7 +263,10 @@ export class OverlayController {
       opacity: 0,
       duration: 0.3,
       ease: 'power2.in',
-      onComplete: () => this.hideScreen(this.failureOverlay),
+      onComplete: () => {
+        this.hideScreen(this.failureOverlay);
+        this.failureBox.style.pointerEvents = 'none';
+      },
     });
   }
 

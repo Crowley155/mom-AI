@@ -121,7 +121,7 @@ Grants and Capital Projects
 The Mid-America West Sports Complex project, the Theatre in the Park renovation and the Administration Building remodel are just a few of the many projects JCPRD has completed. Finance staff that handle Grant and capital asset management provide the structural integrity that holds JCPRD's long-term future together.
 
 [What happens when it fails]
-Without Grants, Capital Assets & Land Acquisitions, the district has no structural integrity. Short-term operations survive, but long-term investments collapse.
+Without Grants and Capital Projects, the district has no structural integrity. Short-term operations survive, but long-term investments collapse.
 
 ---
 

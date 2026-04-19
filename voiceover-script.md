@@ -70,7 +70,7 @@ The Mid-America West Sports Complex project, the Theatre in the Park renovation 
 
 ### What happens when it fails
 
-Without Grants, Capital Assets & Land Acquisitions, the district has no structural integrity. Short-term operations survive, but long-term investments collapse.
+Without Grants and Capital Projects, the district has no structural integrity. Short-term operations survive, but long-term investments collapse.
 
 ---
 

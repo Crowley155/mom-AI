@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <canvas id="scene"></canvas>
+  <canvas id="scene" role="img" aria-label="Interactive 3D car presentation showing how each car part represents a JCPRD Finance team function"></canvas>
 
   <div id="music-bar" style="display:none;">
     <button id="vo-toggle" class="music-bar-btn" title="Toggle voiceover narration">🔊</button>
@@ -31,19 +31,19 @@
     <!-- Tour HUD -->
     <div id="tour-hud" class="screen">
       <!-- caption-box is now position:fixed/draggable — kept inside overlay for show/hide -->
-      <div id="caption-box">
-        <button class="collapse-toggle" title="Collapse">&#x25B4;</button>
+      <div id="caption-box" aria-live="polite" aria-atomic="true">
+        <button class="collapse-toggle" title="Collapse" aria-label="Collapse caption">&#x25B4;</button>
         <span id="part-label" class="part-label"></span>
         <h2 id="team-name" class="team-name"></h2>
         <p id="team-desc" class="team-desc"></p>
-        <div class="resize-handle"></div>
+        <div class="resize-handle" aria-hidden="true"></div>
       </div>
       <div id="progress-bar"><div id="progress-fill"></div></div>
       <div id="tour-controls">
-        <button id="back-btn" class="btn-icon" title="Previous">⏮</button>
-        <button id="pause-btn" class="btn-icon" title="Pause">⏸</button>
-        <span id="step-indicator">1 / 6</span>
-        <button id="skip-btn" class="btn-icon" title="Next">⏭</button>
+        <button id="back-btn" class="btn-icon" title="Previous" aria-label="Previous step">⏮</button>
+        <button id="pause-btn" class="btn-icon" title="Pause" aria-label="Pause tour">⏸</button>
+        <span id="step-indicator">1 / 7</span>
+        <button id="skip-btn" class="btn-icon" title="Next" aria-label="Next step">⏭</button>
         <button id="autoplay-toggle" class="mode-pill active" title="Autoplay enabled">Autoplay</button>
         <div id="speed-bar">
           <button id="speed-half"   class="speed-pill"        title="Half speed">0.5×</button>
@@ -59,10 +59,10 @@
 
     <!-- Failure overlay -->
     <div id="failure-overlay" class="screen">
-      <div id="failure-box">
-        <button class="collapse-toggle" title="Collapse">&#x25B4;</button>
+      <div id="failure-box" aria-live="assertive" aria-atomic="true">
+        <button class="collapse-toggle" title="Collapse" aria-label="Collapse failure text">&#x25B4;</button>
         <p id="failure-text" class="failure-text"></p>
-        <div class="resize-handle"></div>
+        <div class="resize-handle" aria-hidden="true"></div>
       </div>
     </div>
 

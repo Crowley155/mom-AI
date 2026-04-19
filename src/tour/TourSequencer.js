@@ -2,7 +2,7 @@ import gsap from 'gsap';
 import * as THREE from 'three';
 import { tourStepConfigs } from './steps.js';
 import { tourSteps } from '../ui/captions.js';
-import { createFailureAnimation, resetPart } from './failures.js';
+import { createFailureAnimation } from './failures.js';
 import { playVO, stopVO, isVOPlaying, waitForVOEnd } from '../audio/voiceover.js';
 import { createWheelSpinner } from './wheelSpin.js';
 
@@ -313,6 +313,7 @@ export class TourSequencer {
   pulsePartEmissive(group) {
     group.traverse((child) => {
       if (child.isMesh && child.material.emissive) {
+        gsap.killTweensOf(child.material);
         gsap.to(child.material, {
           emissiveIntensity: 0.6,
           duration: 0.5,

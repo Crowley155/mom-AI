@@ -5,10 +5,8 @@ const MIN_R      = 13;
 const MAX_R      = 18;
 
 export function createTrees(scene) {
-  const trunkGeo   = new THREE.CylinderGeometry(0.08, 0.12, 1, 6);
-  const canopyGeoL = new THREE.ConeGeometry(1, 1, 7);
-  const canopyGeoM = new THREE.ConeGeometry(1, 1, 7);
-  const canopyGeoS = new THREE.ConeGeometry(1, 1, 7);
+  const trunkGeo  = new THREE.CylinderGeometry(0.08, 0.12, 1, 6);
+  const canopyGeo = new THREE.ConeGeometry(1, 1, 7);
 
   const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
   const leafMatL = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
@@ -16,9 +14,9 @@ export function createTrees(scene) {
   const leafMatS = new THREE.MeshLambertMaterial({ color: 0x1b5e20 });
 
   const trunks    = new THREE.InstancedMesh(trunkGeo, trunkMat, TREE_COUNT);
-  const canopiesL = new THREE.InstancedMesh(canopyGeoL, leafMatL, TREE_COUNT);
-  const canopiesM = new THREE.InstancedMesh(canopyGeoM, leafMatM, TREE_COUNT);
-  const canopiesS = new THREE.InstancedMesh(canopyGeoS, leafMatS, TREE_COUNT);
+  const canopiesL = new THREE.InstancedMesh(canopyGeo, leafMatL, TREE_COUNT);
+  const canopiesM = new THREE.InstancedMesh(canopyGeo, leafMatM, TREE_COUNT);
+  const canopiesS = new THREE.InstancedMesh(canopyGeo, leafMatS, TREE_COUNT);
 
   [trunks, canopiesL, canopiesM, canopiesS].forEach((m) => {
     m.castShadow = true;

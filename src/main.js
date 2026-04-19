@@ -41,14 +41,32 @@ async function init() {
   renderer.toneMapping = THREE.LinearToneMapping;
   renderer.toneMappingExposure = 1.0;
 
+  const canvas = document.getElementById('scene');
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:999;background:rgba(0,0,0,0.85);color:#fff;font-family:sans-serif;font-size:1.2rem;padding:2rem;text-align:center;';
+    msg.textContent = 'Graphics context lost. Please refresh the page.';
+    document.body.appendChild(msg);
+  });
+
   setupEnvironment();
   setupLights();
   setupGround();
 
-  const result = await loadCar(envMap);
-  car = result.car;
-  parts = result.parts;
-  scene.add(car);
+  try {
+    const result = await loadCar(envMap);
+    car = result.car;
+    parts = result.parts;
+    scene.add(car);
+  } catch (err) {
+    console.error('Failed to load car model:', err);
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:999;background:rgba(0,0,0,0.85);color:#fff;font-family:sans-serif;font-size:1.2rem;padding:2rem;text-align:center;';
+    msg.textContent = 'Could not load the 3D model. Please refresh or check your connection.';
+    document.body.appendChild(msg);
+    return;
+  }
 
   if (new URLSearchParams(window.location.search).has('qa')) {
     runSceneAudit(scene, car, parts, camera);
@@ -59,6 +77,10 @@ async function init() {
 
   initMusic();
   setupEvents();
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    gsap.globalTimeline.timeScale(20);
+  }
 
   window.addEventListener('resize', onResize);
   animate();
@@ -253,6 +275,21 @@ function setupEvents() {
     tourSequencer.setManual(!_autoplay);
     autoplayToggle.classList.toggle('active', _autoplay);
     autoplayToggle.title = _autoplay ? 'Autoplay enabled' : 'Autoplay disabled — use Next to advance';
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!tourSequencer || !overlay) return;
+    switch (e.key) {
+      case 'ArrowRight': tourSequencer.skipToNext(); break;
+      case 'ArrowLeft': tourSequencer.skipToPrev(); break;
+      case ' ':
+        e.preventDefault();
+        const isPaused = tourSequencer.togglePause();
+        overlay.updatePauseButton(isPaused);
+        if (isPaused) pauseMusic();
+        else playMusic();
+        break;
+    }
   });
 
   document.getElementById('replay-btn').addEventListener('click', () => {

@@ -190,7 +190,9 @@ function applyMaterials(bodyGroup, wheelsGroup, envMap) {
       if (!child.isMesh) return;
       const matName = child.material?.name;
       if (matName && materialOverrides[matName]) {
+        const old = child.material;
         child.material = materialOverrides[matName];
+        if (old && old !== child.material) old.dispose();
       }
     });
   });
