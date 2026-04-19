@@ -16,6 +16,7 @@ export class TourSequencer {
     this.isPaused = false;
     this.isManual = false;
     this._waitingForNext = false;
+    this._manualPhase = 0; // 0=running, 1=paused-after-caption, 2=paused-after-failure
     this._voWaiting = false;
     this.timeMultiplier = 1.0;
     this.masterTimeline = null;
@@ -58,6 +59,7 @@ export class TourSequencer {
     }
 
     this.currentStep = index;
+    this._manualPhase = 0;
     const config = tourStepConfigs[index];
     const caption = tourSteps[index];
 
@@ -72,11 +74,7 @@ export class TourSequencer {
     const partGroup = this.parts[config.partKey];
     const isInternal = ['engine', 'steering', 'fuel', 'transmission'].includes(config.partKey);
 
-    const tl = gsap.timeline({
-      onComplete: () => {
-        this.animateRestore(config.partKey, index + 1);
-      },
-    });
+    const tl = gsap.timeline();
     this.masterTimeline = tl;
 
     tl.to(this.camera.position, {
@@ -101,8 +99,8 @@ export class TourSequencer {
     }, [], '-=0.3');
 
     if (this.isManual) {
-      // PRESENTER MODE: pause after caption — wait for click to show failure
       tl.call(() => {
+        this._manualPhase = 1;
         this._waitingForNext = true;
         this.overlay.showNextCue();
         this.masterTimeline.pause();
@@ -130,14 +128,15 @@ export class TourSequencer {
     });
 
     const failAnim = createFailureAnimation(config.partKey, partGroup, this.carGroup, this.camera, this.parts.wheels, this.parts);
-    tl.add(failAnim.play(), '+=0.3');
+    tl.add(failAnim, '+=0.3');
 
     if (this.isManual) {
-      // PRESENTER MODE: pause after failure — wait for click to advance
       tl.call(() => {
+        this._manualPhase = 2;
         this._waitingForNext = true;
         this.overlay.showNextCue();
         this.masterTimeline.pause();
+        // Timeline stops here — skipToNext handles restore + advance
       });
     } else {
       tl.to({}, { duration: 8 * this.timeMultiplier });
@@ -157,6 +156,7 @@ export class TourSequencer {
         stopVO();
         this.overlay.hideFailure();
         this.overlay.hideCaption();
+        this.animateRestore(config.partKey, index + 1);
       });
     }
   }
@@ -174,7 +174,6 @@ export class TourSequencer {
       playVO(`step-${index + 1}-caption`);
     }, [], 0);
 
-    // Infinite orbit — loops until presenter clicks Next
     const orbit = { angle: 0 };
     tl.to(orbit, {
       angle: Math.PI * 2,
@@ -190,10 +189,7 @@ export class TourSequencer {
       },
     }, 0);
 
-    if (this.isManual) {
-      // Presenter clicks Next whenever ready — skipToNext kills this timeline
-    } else {
-      // Autoplay: advance after one full orbit + VO
+    if (!this.isManual) {
       const autoTl = gsap.timeline({
         delay: 30 * this.timeMultiplier,
         onComplete: () => {
@@ -264,7 +260,6 @@ export class TourSequencer {
         if (isInternal) {
           this.parts[partKey].visible = false;
         }
-        // Hide internals that body failure may have shown
         if (partKey === 'body') {
           ['engine', 'steering', 'fuel', 'transmission'].forEach((k) => {
             if (this.parts[k]) this.parts[k].visible = false;
@@ -290,7 +285,6 @@ export class TourSequencer {
       ease: 'power2.inOut',
     }, 0);
 
-    // Animate individual parts back to saved positions
     if (saved) {
       saved.forEach(({ obj, pos, rot, scale }) => {
         tl.to(obj.position, {
@@ -432,25 +426,42 @@ export class TourSequencer {
   }
 
   skipToNext() {
-    // If we're at a manual pause point, resume the timeline to advance
-    // to the next phase (caption → failure → restore) within the same step
     if (this._waitingForNext && this.masterTimeline) {
       this._waitingForNext = false;
       stopVO();
       this.overlay.hideNextCue();
-      this.masterTimeline.resume();
-      return;
+
+      if (this._manualPhase === 1) {
+        // Paused after caption → resume to play failure
+        this._manualPhase = 0;
+        this.masterTimeline.resume();
+        return;
+      }
+
+      if (this._manualPhase === 2) {
+        // Paused after failure → kill timeline, restore, advance
+        this._manualPhase = 0;
+        this.masterTimeline.kill();
+        this.overlay.hideFailure();
+        this.overlay.hideCaption();
+        this.animateRestore(
+          tourStepConfigs[this.currentStep]?.partKey,
+          this.currentStep + 1,
+        );
+        return;
+      }
     }
 
+    // Fallback: hard skip (intro, or not at a pause point)
     this._voWaiting = false;
     this._waitingForNext = false;
+    this._manualPhase = 0;
     stopVO();
     this.overlay.hideNextCue();
     this.overlay.hideFailure();
     this.overlay.hideCaption();
     if (this.masterTimeline) this.masterTimeline.kill();
 
-    // For intro, just advance directly
     if (tourStepConfigs[this.currentStep]?.partKey === 'intro') {
       this.runStep(this.currentStep + 1);
       return;
@@ -464,6 +475,7 @@ export class TourSequencer {
 
   skipToPrev() {
     this._voWaiting = false;
+    this._manualPhase = 0;
     stopVO();
     const prevIndex = Math.max(0, this.currentStep - 1);
     if (this.masterTimeline) {
@@ -497,6 +509,7 @@ export class TourSequencer {
 
   reset() {
     this._voWaiting = false;
+    this._manualPhase = 0;
     stopVO();
     if (this.masterTimeline) {
       this.masterTimeline.kill();

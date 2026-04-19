@@ -23,16 +23,8 @@ function setGroupOpacity(group, opacity) {
   });
 }
 
-/**
- * @param {string} partKey
- * @param {THREE.Group} partGroup
- * @param {THREE.Group} carGroup
- * @param {THREE.Camera} camera
- * @param {THREE.Group} wheelsGroup
- * @param {Object} allParts - all part groups keyed by name (for body internals)
- */
 export function createFailureAnimation(partKey, partGroup, carGroup, camera, wheelsGroup, allParts) {
-  const tl = gsap.timeline({ paused: true });
+  const tl = gsap.timeline();
   const spinner = wheelsGroup ? createWheelSpinner(wheelsGroup) : null;
 
   switch (partKey) {
@@ -40,11 +32,9 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
       if (spinner) spinner.reset(carGroup.position.z);
       const baseY = partGroup.position.y;
 
-      // Engine rises and drops
       tl.to(partGroup.position, { y: baseY + 0.35, duration: 0.4, ease: 'power2.out' })
         .to(partGroup.position, { y: baseY, duration: 0.4, ease: 'bounce.out' }, 0.4);
 
-      // Sputtering oscillation — decreasing amplitude
       tl.to(partGroup.position, {
         y: baseY + 0.08, yoyo: true, repeat: 5, duration: 0.1, ease: 'steps(1)',
       }, 0.9);
@@ -52,7 +42,6 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
         y: baseY + 0.03, yoyo: true, repeat: 3, duration: 0.15, ease: 'steps(1)',
       }, 1.6);
 
-      // Rotation wobble on the engine
       tl.to(partGroup.rotation, {
         z: 0.08, yoyo: true, repeat: 5, duration: 0.1, ease: 'none',
       }, 0.9);
@@ -60,7 +49,6 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
         z: 0.03, yoyo: true, repeat: 3, duration: 0.15, ease: 'none',
       }, 1.6);
 
-      // Stronger car shudder
       tl.to(carGroup.position, {
         z: '+=0.12', yoyo: true, repeat: 10, duration: 0.08, ease: 'none',
         onUpdate: () => { if (spinner) spinner.update(carGroup.position.z); },
@@ -69,7 +57,6 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
         z: 0.02, yoyo: true, repeat: 6, duration: 0.1, ease: 'none',
       }, 0.5);
 
-      // Engine dims — emissive fades to nothing
       partGroup.traverse((child) => {
         if (child.isMesh && child.material.emissive) {
           tl.to(child.material, {
@@ -81,40 +68,33 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
       break;
     }
     case 'wheels': {
-      const wheelPivot = partGroup.children.find((c) => c.name === 'wheelPivot');
+      // Collect wheel groups
       const wheels = [];
-      if (wheelPivot) {
-        wheelPivot.children.forEach((child) => {
-          if (child.name && child.name.startsWith('Wheel')) wheels.push(child);
-        });
-      }
-      if (wheels.length === 0) {
-        partGroup.children.forEach((child) => {
-          if (child.type === 'Group') wheels.push(child);
-        });
-      }
-
-      // Wheels scatter outward and slightly UP — never below ground
-      wheels.forEach((w, i) => {
-        const xDir = w.position.x > 0 ? 1 : -1;
-        const zDir = w.position.z > 0 ? 1 : -1;
-        tl.to(w.position, {
-          x: w.position.x + xDir * 1.2,
-          y: w.position.y + 0.15,
-          z: w.position.z + zDir * 0.8,
-          duration: 0.8,
-          ease: 'power2.out',
-        }, i * 0.12);
-        tl.to(w.rotation, {
-          z: w.rotation.z + xDir * 0.4,
-          duration: 0.8,
-          ease: 'power2.out',
-        }, i * 0.12);
+      partGroup.children.forEach((child) => {
+        if (child.type === 'Group') wheels.push(child);
       });
 
-      // Car tilts — stays above ground (no y drop)
-      tl.to(carGroup.rotation, { z: -0.06, duration: 0.5, ease: 'power2.out' }, 0.3);
-      tl.to(carGroup.rotation, { x: 0.03, duration: 0.5, ease: 'power2.out' }, 0.3);
+      // Wheels simply fall off — drop to ground with a slight outward wobble
+      wheels.forEach((w, i) => {
+        const xDir = w.position.x > 0 ? 1 : -1;
+        tl.to(w.position, {
+          x: w.position.x + xDir * 0.4,
+          y: -0.35,
+          duration: 0.5,
+          ease: 'bounce.out',
+        }, i * 0.15);
+        // Tilt as they fall
+        tl.to(w.rotation, {
+          x: w.rotation.x + 0.8,
+          z: w.rotation.z + xDir * 0.5,
+          duration: 0.5,
+          ease: 'power2.out',
+        }, i * 0.15);
+      });
+
+      // Car sags slightly
+      tl.to(carGroup.rotation, { z: -0.04, duration: 0.6, ease: 'power2.out' }, 0.3);
+      tl.to(carGroup.rotation, { x: 0.02, duration: 0.6, ease: 'power2.out' }, 0.3);
 
       break;
     }
@@ -204,7 +184,7 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
       break;
     }
     case 'body': {
-      // Show internal parts so the car isn't hollow
+      // Show internal parts so the car isn't hollow when shell flies off
       const internalKeys = ['engine', 'steering', 'fuel', 'transmission'];
       if (allParts) {
         tl.call(() => {
@@ -217,14 +197,12 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
         }, [], 0);
       }
 
-      // Hide decals
       tl.call(() => {
         partGroup.traverse((c) => {
           if (c.isMesh && c.userData.isDecal) c.visible = false;
         });
       }, [], 0);
 
-      // Collect body meshes for scatter
       const meshes = [];
       partGroup.traverse((child) => {
         if (!child.isMesh) return;
@@ -232,24 +210,27 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
         meshes.push(child);
       });
 
-      // Scale offsets to compensate for the 0.5x pivot scale
+      // Panels explode off-screen — huge offsets so they leave the viewport entirely
       const SCALE_COMP = 2.0;
-
       meshes.forEach((mesh, i) => {
-        const dir = gsap.utils.random(-1, 1, 0.1) || 0.5;
+        const angle = (i / Math.max(meshes.length, 1)) * Math.PI * 2;
+        const xOff = Math.cos(angle) * 12 * SCALE_COMP;
+        const zOff = Math.sin(angle) * 12 * SCALE_COMP;
+        const yOff = (3 + Math.random() * 4) * SCALE_COMP;
+
         tl.to(mesh.position, {
-          x: mesh.position.x + dir * 1.2 * SCALE_COMP,
-          y: mesh.position.y + Math.random() * 1.0 * SCALE_COMP,
-          z: mesh.position.z + dir * 0.8 * SCALE_COMP,
-          duration: 1.2,
-          ease: 'power2.out',
-        }, i * 0.08);
+          x: mesh.position.x + xOff,
+          y: mesh.position.y + yOff,
+          z: mesh.position.z + zOff,
+          duration: 0.8,
+          ease: 'power3.out',
+        }, i * 0.04);
         tl.to(mesh.rotation, {
-          x: (Math.random() - 0.5) * 1.0,
-          z: (Math.random() - 0.5) * 1.0,
-          duration: 1.2,
+          x: (Math.random() - 0.5) * 3,
+          z: (Math.random() - 0.5) * 3,
+          duration: 0.8,
           ease: 'power2.out',
-        }, i * 0.08);
+        }, i * 0.04);
       });
       break;
     }
