@@ -78,14 +78,14 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
 
       const wheels = [];
       container.children.forEach((child) => {
-        if (child.type === 'Group' && child.name && child.name.startsWith('Wheel')) {
+        if (child.name && child.name.startsWith('Wheel')) {
           wheels.push(child);
         }
       });
-      // Fallback: any child Group that isn't the axle
+      // Fallback: any child that isn't the axle
       if (wheels.length === 0) {
         container.children.forEach((child) => {
-          if (child.type === 'Group' && child.name !== 'Axles') wheels.push(child);
+          if (child.name !== 'Axles' && child.children.length > 0) wheels.push(child);
         });
       }
 
@@ -258,15 +258,15 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
           x: target.x,
           y: target.y,
           z: target.z,
-          duration: 0.8,
-          ease: 'power3.out',
-        }, i * 0.03);
+          duration: 1.8,
+          ease: 'power2.out',
+        }, i * 0.05);
         tl.to(mesh.rotation, {
           x: (Math.random() - 0.5) * 3,
           z: (Math.random() - 0.5) * 3,
-          duration: 0.8,
+          duration: 1.8,
           ease: 'power2.out',
-        }, i * 0.03);
+        }, i * 0.05);
       });
 
       // Insurance: hide meshes after animation so nothing lingers on screen
