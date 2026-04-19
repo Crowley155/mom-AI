@@ -14,10 +14,10 @@ export class TourSequencer {
     this.overlay = overlayController;
     this.currentStep = 0;
     this.isPaused = false;
-    this.isManual = false;        // Step mode: user controls slide transitions
-    this._waitingForNext = false; // true when paused mid-step awaiting user click
-    this._voWaiting = false;      // true when GSAP is paused waiting for VO to finish
-    this.timeMultiplier = 1.0;    // 1 = Normal reading pace; >1 = slower; <1 = faster
+    this.isManual = false;
+    this._waitingForNext = false;
+    this._voWaiting = false;
+    this.timeMultiplier = 1.0;
     this.masterTimeline = null;
     this.defaultLookAt = defaultLookAt || new THREE.Vector3(0, 0.6, 0);
     this.currentLookAt = this.defaultLookAt.clone();
@@ -100,11 +100,15 @@ export class TourSequencer {
       playVO(`step-${index + 1}-caption`);
     }, [], '-=0.3');
 
-    // Fixed reading-time delay (always runs — guarantees advancement)
-    tl.to({}, { duration: 12 * this.timeMultiplier });
-
-    // If VO is still playing after the delay, pause and wait for it
-    if (!this.isManual) {
+    if (this.isManual) {
+      // PRESENTER MODE: pause after caption — wait for click to show failure
+      tl.call(() => {
+        this._waitingForNext = true;
+        this.overlay.showNextCue();
+        this.masterTimeline.pause();
+      });
+    } else {
+      tl.to({}, { duration: 12 * this.timeMultiplier });
       tl.call(() => {
         if (isVOPlaying()) {
           this._voWaiting = true;
@@ -125,20 +129,18 @@ export class TourSequencer {
       playVO(`step-${index + 1}-failure`);
     });
 
-    const failAnim = createFailureAnimation(config.partKey, partGroup, this.carGroup, this.camera, this.parts.wheels);
+    const failAnim = createFailureAnimation(config.partKey, partGroup, this.carGroup, this.camera, this.parts.wheels, this.parts);
     tl.add(failAnim.play(), '+=0.3');
 
-    // Fixed reading-time delay for failure text
-    tl.to({}, { duration: 8 * this.timeMultiplier });
-
     if (this.isManual) {
+      // PRESENTER MODE: pause after failure — wait for click to advance
       tl.call(() => {
         this._waitingForNext = true;
         this.overlay.showNextCue();
         this.masterTimeline.pause();
       });
     } else {
-      // If VO still playing after delay + animation, wait for it
+      tl.to({}, { duration: 8 * this.timeMultiplier });
       tl.call(() => {
         if (isVOPlaying()) {
           this._voWaiting = true;
@@ -162,30 +164,23 @@ export class TourSequencer {
   _runIntro(index, config, caption) {
     const ORBIT_RADIUS = 3.0;
     const ORBIT_HEIGHT = 1.2;
-    const ORBIT_DURATION = 30;
     const center = config.lookAt.clone();
 
-    const tl = gsap.timeline({
-      onComplete: () => {
-        stopVO();
-        this.overlay.hideCaption();
-        this.runStep(index + 1);
-      },
-    });
+    const tl = gsap.timeline();
     this.masterTimeline = tl;
 
-    // Show the caption immediately
     tl.call(() => {
       this.overlay.showCaption(caption.partLabel, caption.teamName, caption.teamDesc);
       playVO(`step-${index + 1}-caption`);
     }, [], 0);
 
-    // 360-degree orbit around the car
+    // Infinite orbit — loops until presenter clicks Next
     const orbit = { angle: 0 };
     tl.to(orbit, {
       angle: Math.PI * 2,
-      duration: ORBIT_DURATION * this.timeMultiplier,
+      duration: 30 * this.timeMultiplier,
       ease: 'none',
+      repeat: -1,
       onUpdate: () => {
         this.camera.position.x = center.x + Math.cos(orbit.angle) * ORBIT_RADIUS;
         this.camera.position.z = center.z + Math.sin(orbit.angle) * ORBIT_RADIUS;
@@ -195,26 +190,27 @@ export class TourSequencer {
       },
     }, 0);
 
-    // If VO is still playing after the orbit, wait for it
-    if (!this.isManual) {
-      tl.call(() => {
+    if (this.isManual) {
+      // Presenter clicks Next whenever ready — skipToNext kills this timeline
+    } else {
+      // Autoplay: advance after one full orbit + VO
+      const autoTl = gsap.timeline({
+        delay: 30 * this.timeMultiplier,
+        onComplete: () => {
+          tl.kill();
+          stopVO();
+          this.overlay.hideCaption();
+          this.runStep(index + 1);
+        },
+      });
+      autoTl.call(() => {
         if (isVOPlaying()) {
-          this._voWaiting = true;
-          tl.pause();
+          autoTl.pause();
           waitForVOEnd(() => {
             if (this.masterTimeline !== tl) return;
-            this._voWaiting = false;
-            if (!this.isPaused) tl.resume();
+            autoTl.resume();
           });
         }
-      });
-    }
-
-    if (this.isManual) {
-      tl.call(() => {
-        this._waitingForNext = true;
-        this.overlay.showNextCue();
-        this.masterTimeline.pause();
       });
     }
   }
@@ -259,6 +255,7 @@ export class TourSequencer {
 
   animateRestore(partKey, nextIndex) {
     const isInternal = ['engine', 'steering', 'fuel', 'transmission'].includes(partKey);
+    const saved = this.savedPartStates[partKey];
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -266,6 +263,12 @@ export class TourSequencer {
         this.restoreAllOpacity();
         if (isInternal) {
           this.parts[partKey].visible = false;
+        }
+        // Hide internals that body failure may have shown
+        if (partKey === 'body') {
+          ['engine', 'steering', 'fuel', 'transmission'].forEach((k) => {
+            if (this.parts[k]) this.parts[k].visible = false;
+          });
         }
         this.runStep(nextIndex);
       },
@@ -286,6 +289,24 @@ export class TourSequencer {
       duration: 0.6,
       ease: 'power2.inOut',
     }, 0);
+
+    // Animate individual parts back to saved positions
+    if (saved) {
+      saved.forEach(({ obj, pos, rot, scale }) => {
+        tl.to(obj.position, {
+          x: pos.x, y: pos.y, z: pos.z,
+          duration: 0.6, ease: 'power2.inOut',
+        }, 0);
+        tl.to(obj.rotation, {
+          x: rot.x, y: rot.y, z: rot.z,
+          duration: 0.6, ease: 'power2.inOut',
+        }, 0);
+        tl.to(obj.scale, {
+          x: scale.x, y: scale.y, z: scale.z,
+          duration: 0.6, ease: 'power2.inOut',
+        }, 0);
+      });
+    }
   }
 
   fullRestore(partKey) {
@@ -380,7 +401,6 @@ export class TourSequencer {
 
   pause() {
     this.isPaused = true;
-    // If waiting for VO, GSAP is already paused — just record user intent
     if (this.masterTimeline && !this._voWaiting) {
       this.masterTimeline.pause();
     }
@@ -388,7 +408,6 @@ export class TourSequencer {
 
   resume() {
     this.isPaused = false;
-    // Don't resume GSAP yet if we're still waiting for VO to finish
     if (this.masterTimeline && !this._voWaiting) {
       this.masterTimeline.resume();
     }
@@ -400,22 +419,14 @@ export class TourSequencer {
     return this.isPaused;
   }
 
-  /**
-   * Set reading pace multiplier.
-   * 1.0 = Normal (12s caption / 8s failure)
-   * 1.5 = Slow    (18s / 12s)
-   * 0.5 = Fast    ( 6s /  4s)
-   */
   setSpeed(multiplier) {
     this.timeMultiplier = multiplier;
   }
 
-  /** Switch between Auto (false) and Step/Manual (true) modes. */
   setManual(manual) {
     this.isManual = manual;
     this.overlay.setPauseVisible(!manual);
     if (manual && this.isPaused) {
-      // Resume so the timeline can reach the manual pause point
       this.resume();
     }
   }
@@ -423,11 +434,18 @@ export class TourSequencer {
   skipToNext() {
     this._voWaiting = false;
     this._waitingForNext = false;
-    stopVO(); // cancels VO callback so it won't try to resume after kill
+    stopVO();
     this.overlay.hideNextCue();
     this.overlay.hideFailure();
     this.overlay.hideCaption();
     if (this.masterTimeline) this.masterTimeline.kill();
+
+    // For intro, just advance directly
+    if (tourStepConfigs[this.currentStep]?.partKey === 'intro') {
+      this.runStep(this.currentStep + 1);
+      return;
+    }
+
     this.animateRestore(
       tourStepConfigs[this.currentStep]?.partKey,
       this.currentStep + 1
@@ -446,6 +464,11 @@ export class TourSequencer {
     const currentKey = tourStepConfigs[this.currentStep]?.partKey;
     if (['engine', 'steering', 'fuel', 'transmission'].includes(currentKey)) {
       if (this.parts[currentKey]) this.parts[currentKey].visible = false;
+    }
+    if (currentKey === 'body') {
+      ['engine', 'steering', 'fuel', 'transmission'].forEach((k) => {
+        if (this.parts[k]) this.parts[k].visible = false;
+      });
     }
     gsap.set(this.carGroup.position, {
       x: this.savedCarPos.x,

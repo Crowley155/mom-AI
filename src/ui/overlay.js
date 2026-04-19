@@ -218,7 +218,7 @@ export class OverlayController {
   showCaption(partLabel, teamName, teamDesc) {
     this.partLabel.textContent = partLabel;
     this.teamName.textContent  = teamName;
-    this.teamDesc.textContent  = teamDesc;
+    this.teamDesc.innerHTML    = teamDesc.replace(/\n\n/g, '<br><br>');
 
     this._restorePos(this.captionBox, 'captionBox', { bottom: '5.5rem', left: '1.5rem' });
     this._restoreSize(this.captionBox, 'captionBox');

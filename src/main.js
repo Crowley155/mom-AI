@@ -75,8 +75,16 @@ async function init() {
   overlay = new OverlayController();
   tourSequencer = new TourSequencer(camera, car, parts, overlay, lookAtTarget);
 
+  const loader = document.getElementById('loader');
+  if (loader) loader.remove();
+
   initMusic();
   setupEvents();
+
+  // Default to presenter mode
+  tourSequencer.setManual(true);
+  document.getElementById('autoplay-toggle').style.display = 'none';
+  document.getElementById('speed-bar').style.display = 'none';
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     gsap.globalTimeline.timeScale(20);
@@ -268,7 +276,7 @@ function setupEvents() {
   });
 
   // Autoplay toggle — highlighted = ON, faded = OFF
-  let _autoplay = true;
+  let _autoplay = false;
   const autoplayToggle = document.getElementById('autoplay-toggle');
   autoplayToggle.addEventListener('click', () => {
     _autoplay = !_autoplay;

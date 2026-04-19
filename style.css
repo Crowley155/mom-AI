@@ -11,6 +11,25 @@ body {
   color: #fff;
 }
 
+#loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  background: #1a2e1a;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  animation: loader-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loader-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
 #music-bar {
   position: fixed;
   top: 1rem;

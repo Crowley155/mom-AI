@@ -23,36 +23,99 @@ function setGroupOpacity(group, opacity) {
   });
 }
 
-export function createFailureAnimation(partKey, partGroup, carGroup, camera, wheelsGroup) {
+/**
+ * @param {string} partKey
+ * @param {THREE.Group} partGroup
+ * @param {THREE.Group} carGroup
+ * @param {THREE.Camera} camera
+ * @param {THREE.Group} wheelsGroup
+ * @param {Object} allParts - all part groups keyed by name (for body internals)
+ */
+export function createFailureAnimation(partKey, partGroup, carGroup, camera, wheelsGroup, allParts) {
   const tl = gsap.timeline({ paused: true });
   const spinner = wheelsGroup ? createWheelSpinner(wheelsGroup) : null;
 
   switch (partKey) {
     case 'engine': {
       if (spinner) spinner.reset(carGroup.position.z);
-      tl.to(partGroup.position, { y: partGroup.position.y + 0.3, duration: 0.4, ease: 'power2.out' })
-        .to(partGroup.position, { y: partGroup.position.y, duration: 0.4, ease: 'bounce.out' }, 0.4)
-        .to(carGroup.position, {
-          z: '+=0.05', yoyo: true, repeat: 8, duration: 0.08, ease: 'none',
-          onUpdate: () => { if (spinner) spinner.update(carGroup.position.z); },
-        }, 0.3);
+      const baseY = partGroup.position.y;
+
+      // Engine rises and drops
+      tl.to(partGroup.position, { y: baseY + 0.35, duration: 0.4, ease: 'power2.out' })
+        .to(partGroup.position, { y: baseY, duration: 0.4, ease: 'bounce.out' }, 0.4);
+
+      // Sputtering oscillation — decreasing amplitude
+      tl.to(partGroup.position, {
+        y: baseY + 0.08, yoyo: true, repeat: 5, duration: 0.1, ease: 'steps(1)',
+      }, 0.9);
+      tl.to(partGroup.position, {
+        y: baseY + 0.03, yoyo: true, repeat: 3, duration: 0.15, ease: 'steps(1)',
+      }, 1.6);
+
+      // Rotation wobble on the engine
+      tl.to(partGroup.rotation, {
+        z: 0.08, yoyo: true, repeat: 5, duration: 0.1, ease: 'none',
+      }, 0.9);
+      tl.to(partGroup.rotation, {
+        z: 0.03, yoyo: true, repeat: 3, duration: 0.15, ease: 'none',
+      }, 1.6);
+
+      // Stronger car shudder
+      tl.to(carGroup.position, {
+        z: '+=0.12', yoyo: true, repeat: 10, duration: 0.08, ease: 'none',
+        onUpdate: () => { if (spinner) spinner.update(carGroup.position.z); },
+      }, 0.5);
+      tl.to(carGroup.rotation, {
+        z: 0.02, yoyo: true, repeat: 6, duration: 0.1, ease: 'none',
+      }, 0.5);
+
+      // Engine dims — emissive fades to nothing
+      partGroup.traverse((child) => {
+        if (child.isMesh && child.material.emissive) {
+          tl.to(child.material, {
+            emissiveIntensity: 0, duration: 1.5, ease: 'power2.in',
+          }, 1.0);
+        }
+      });
+
       break;
     }
     case 'wheels': {
+      const wheelPivot = partGroup.children.find((c) => c.name === 'wheelPivot');
       const wheels = [];
-      partGroup.children.forEach((child) => {
-        if (child.type === 'Group') wheels.push(child);
-      });
+      if (wheelPivot) {
+        wheelPivot.children.forEach((child) => {
+          if (child.name && child.name.startsWith('Wheel')) wheels.push(child);
+        });
+      }
+      if (wheels.length === 0) {
+        partGroup.children.forEach((child) => {
+          if (child.type === 'Group') wheels.push(child);
+        });
+      }
+
+      // Wheels scatter outward and slightly UP — never below ground
       wheels.forEach((w, i) => {
+        const xDir = w.position.x > 0 ? 1 : -1;
+        const zDir = w.position.z > 0 ? 1 : -1;
         tl.to(w.position, {
-          y: w.position.y - 0.3,
-          z: w.position.z + (w.position.z > 0 ? 0.5 : -0.5),
-          duration: 0.6,
+          x: w.position.x + xDir * 1.2,
+          y: w.position.y + 0.15,
+          z: w.position.z + zDir * 0.8,
+          duration: 0.8,
           ease: 'power2.out',
-        }, i * 0.1);
+        }, i * 0.12);
+        tl.to(w.rotation, {
+          z: w.rotation.z + xDir * 0.4,
+          duration: 0.8,
+          ease: 'power2.out',
+        }, i * 0.12);
       });
-      tl.to(carGroup.rotation, { z: -0.05, duration: 0.4, ease: 'power2.out' }, 0.3)
-        .to(carGroup.position, { y: -0.15, duration: 0.4, ease: 'bounce.out' }, 0.3);
+
+      // Car tilts — stays above ground (no y drop)
+      tl.to(carGroup.rotation, { z: -0.06, duration: 0.5, ease: 'power2.out' }, 0.3);
+      tl.to(carGroup.rotation, { x: 0.03, duration: 0.5, ease: 'power2.out' }, 0.3);
+
       break;
     }
     case 'steering': {
@@ -141,45 +204,56 @@ export function createFailureAnimation(partKey, partGroup, carGroup, camera, whe
       break;
     }
     case 'body': {
+      // Show internal parts so the car isn't hollow
+      const internalKeys = ['engine', 'steering', 'fuel', 'transmission'];
+      if (allParts) {
+        tl.call(() => {
+          internalKeys.forEach((k) => {
+            if (allParts[k]) {
+              allParts[k].visible = true;
+              setGroupOpacity(allParts[k], 0.5);
+            }
+          });
+        }, [], 0);
+      }
+
+      // Hide decals
+      tl.call(() => {
+        partGroup.traverse((c) => {
+          if (c.isMesh && c.userData.isDecal) c.visible = false;
+        });
+      }, [], 0);
+
+      // Collect body meshes for scatter
       const meshes = [];
       partGroup.traverse((child) => {
         if (!child.isMesh) return;
         if (child.userData.isDecal) return;
         meshes.push(child);
       });
-      tl.call(() => {
-        partGroup.traverse((c) => {
-          if (c.isMesh && c.userData.isDecal) c.visible = false;
-        });
-      }, [], 0);
+
+      // Scale offsets to compensate for the 0.5x pivot scale
+      const SCALE_COMP = 2.0;
+
       meshes.forEach((mesh, i) => {
-        const dir = new gsap.utils.random(-1, 1, 0.1);
+        const dir = gsap.utils.random(-1, 1, 0.1) || 0.5;
         tl.to(mesh.position, {
-          x: mesh.position.x + dir * 0.6,
-          y: mesh.position.y + Math.random() * 0.5,
-          z: mesh.position.z + dir * 0.4,
-          duration: 0.8,
+          x: mesh.position.x + dir * 1.2 * SCALE_COMP,
+          y: mesh.position.y + Math.random() * 1.0 * SCALE_COMP,
+          z: mesh.position.z + dir * 0.8 * SCALE_COMP,
+          duration: 1.2,
           ease: 'power2.out',
-        }, i * 0.05);
+        }, i * 0.08);
         tl.to(mesh.rotation, {
-          x: Math.random() * 0.5,
-          z: Math.random() * 0.5,
-          duration: 0.8,
+          x: (Math.random() - 0.5) * 1.0,
+          z: (Math.random() - 0.5) * 1.0,
+          duration: 1.2,
           ease: 'power2.out',
-        }, i * 0.05);
+        }, i * 0.08);
       });
       break;
     }
   }
 
   return tl;
-}
-
-export function resetPart(partGroup) {
-  partGroup.traverse((child) => {
-    if (child.isMesh && ghostCache.has(child)) {
-      const ghost = ghostCache.get(child);
-      ghost.opacity = 1;
-    }
-  });
 }
