@@ -1,7 +1,7 @@
 import { Howl } from 'howler';
 
 let bgMusic = null;
-let _userVolume = 0.3; // tracks slider value so restoreMusic knows the target
+let _userVolume = 0.1;
 
 export function initMusic() {
   bgMusic = new Howl({
