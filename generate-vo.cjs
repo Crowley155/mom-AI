@@ -3,20 +3,27 @@ const fs = require('fs');
 const path = require('path');
 
 const API_KEY = 'sk_23887c4d20229777b351f8c9a97bfc8f1748c2f9ccea00ad';
-const VOICE_ID = 'cjVigY5qzO86Huf0OWal'; // Eric - Smooth, Trustworthy
+const VOICE_RACHEL = 'ZT9u07TYPVl83ejeLakq'; // Rachel — captions & finale
+const VOICE_ALAN   = 'SYnlsZzyWoEWknEaaYIx'; // Alan — failure/negative clips
 const MODEL = 'eleven_turbo_v2_5';
 const SCRIPTS_DIR = path.join(__dirname, 'vo-scripts');
 const OUTPUT_DIR = path.join(__dirname, 'public', 'audio', 'vo');
 
 const CLIPS = [
-  'step-1-caption',
-  'step-2-caption', 'step-2-failure',
-  'step-3-caption', 'step-3-failure',
-  'step-4-caption', 'step-4-failure',
-  'step-5-caption', 'step-5-failure',
-  'step-6-caption', 'step-6-failure',
-  'step-7-caption', 'step-7-failure',
-  'finale',
+  { name: 'step-1-caption',  voice: VOICE_RACHEL },
+  { name: 'step-2-caption',  voice: VOICE_RACHEL },
+  { name: 'step-2-failure',  voice: VOICE_ALAN },
+  { name: 'step-3-caption',  voice: VOICE_RACHEL },
+  { name: 'step-3-failure',  voice: VOICE_ALAN },
+  { name: 'step-4-caption',  voice: VOICE_RACHEL },
+  { name: 'step-4-failure',  voice: VOICE_ALAN },
+  { name: 'step-5-caption',  voice: VOICE_RACHEL },
+  { name: 'step-5-failure',  voice: VOICE_ALAN },
+  { name: 'step-6-caption',  voice: VOICE_RACHEL },
+  { name: 'step-6-failure',  voice: VOICE_ALAN },
+  { name: 'step-7-caption',  voice: VOICE_RACHEL },
+  { name: 'step-7-failure',  voice: VOICE_ALAN },
+  { name: 'finale',          voice: VOICE_RACHEL },
 ];
 
 function readScript(name) {
@@ -28,10 +35,11 @@ function readScript(name) {
     .trim();
 }
 
-function generateClip(name) {
+function generateClip({ name, voice }) {
   return new Promise((resolve, reject) => {
     const text = readScript(name);
-    console.log(`  "${name}" (${text.length} chars)`);
+    const voiceLabel = voice === VOICE_RACHEL ? 'Rachel' : 'Alan';
+    console.log(`  "${name}" [${voiceLabel}] (${text.length} chars)`);
 
     const postData = JSON.stringify({
       text,
@@ -41,7 +49,7 @@ function generateClip(name) {
 
     const opts = {
       hostname: 'api.elevenlabs.io',
-      path: `/v1/text-to-speech/${VOICE_ID}`,
+      path: `/v1/text-to-speech/${voice}`,
       method: 'POST',
       headers: {
         'xi-api-key': API_KEY,
@@ -83,10 +91,10 @@ async function main() {
     }
   }
 
-  console.log(`\nGenerating ${CLIPS.length} clips with voice: Eric (${VOICE_ID})\n`);
+  console.log(`\nGenerating ${CLIPS.length} clips (Rachel=captions, Alan=failures)\n`);
 
-  for (const name of CLIPS) {
-    await generateClip(name);
+  for (const clip of CLIPS) {
+    await generateClip(clip);
     await new Promise(r => setTimeout(r, 500));
   }
 
