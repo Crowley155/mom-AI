@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { tourStepConfigs } from './steps.js';
 import { tourSteps } from '../ui/captions.js';
 import { createFailureAnimation } from './failures.js';
-import { playVO, stopVO, isVOPlaying, waitForVOEnd } from '../audio/voiceover.js';
+import { playVO, stopVO, waitForVOEnd } from '../audio/voiceover.js';
 import { createWheelSpinner } from './wheelSpin.js';
 
 export class TourSequencer {
@@ -106,17 +106,19 @@ export class TourSequencer {
         this.masterTimeline.pause();
       });
     } else {
-      tl.to({}, { duration: 12 * this.timeMultiplier });
+      // Wait for caption VO to finish before moving to failure phase
       tl.call(() => {
-        if (isVOPlaying()) {
-          this._voWaiting = true;
-          tl.pause();
-          waitForVOEnd(() => {
-            if (this.masterTimeline !== tl) return;
-            this._voWaiting = false;
-            if (!this.isPaused) tl.resume();
+        this._voWaiting = true;
+        tl.pause();
+        waitForVOEnd(() => {
+          if (this.masterTimeline !== tl) return;
+          this._voWaiting = false;
+          // Brief breathing room after caption VO ends
+          gsap.delayedCall(1.5, () => {
+            if (this.masterTimeline !== tl || this.isPaused) return;
+            tl.resume();
           });
-        }
+        });
       });
     }
 
@@ -136,20 +138,20 @@ export class TourSequencer {
         this._waitingForNext = true;
         this.overlay.showNextCue();
         this.masterTimeline.pause();
-        // Timeline stops here — skipToNext handles restore + advance
       });
     } else {
-      tl.to({}, { duration: 8 * this.timeMultiplier });
+      // Wait for failure VO to finish before restoring
       tl.call(() => {
-        if (isVOPlaying()) {
-          this._voWaiting = true;
-          tl.pause();
-          waitForVOEnd(() => {
-            if (this.masterTimeline !== tl) return;
-            this._voWaiting = false;
-            if (!this.isPaused) tl.resume();
+        this._voWaiting = true;
+        tl.pause();
+        waitForVOEnd(() => {
+          if (this.masterTimeline !== tl) return;
+          this._voWaiting = false;
+          gsap.delayedCall(2.0, () => {
+            if (this.masterTimeline !== tl || this.isPaused) return;
+            tl.resume();
           });
-        }
+        });
       });
 
       tl.call(() => {
@@ -190,23 +192,16 @@ export class TourSequencer {
     }, 0);
 
     if (!this.isManual) {
-      const autoTl = gsap.timeline({
-        delay: 30 * this.timeMultiplier,
-        onComplete: () => {
+      // Wait for intro VO to finish, then advance
+      waitForVOEnd(() => {
+        if (this.masterTimeline !== tl) return;
+        gsap.delayedCall(2.0, () => {
+          if (this.masterTimeline !== tl) return;
           tl.kill();
           stopVO();
           this.overlay.hideCaption();
           this.runStep(index + 1);
-        },
-      });
-      autoTl.call(() => {
-        if (isVOPlaying()) {
-          autoTl.pause();
-          waitForVOEnd(() => {
-            if (this.masterTimeline !== tl) return;
-            autoTl.resume();
-          });
-        }
+        });
       });
     }
   }

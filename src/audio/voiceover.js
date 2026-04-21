@@ -8,6 +8,7 @@ let _current = null;
 let _currentName = null;
 let _endCallback = null;
 let _safetyTimer = null;
+let _playRequested = false;
 
 function clipUrl(name) {
   return `${import.meta.env.BASE_URL}audio/vo/${name}.mp3`;
@@ -21,6 +22,7 @@ function _onNaturalEnd() {
   restoreMusic();
   _current = null;
   _currentName = null;
+  _playRequested = false;
   _clearSafety();
   const cb = _endCallback;
   _endCallback = null;
@@ -31,6 +33,7 @@ function _onForceStop() {
   restoreMusic();
   _current = null;
   _currentName = null;
+  _playRequested = false;
 }
 
 /**
@@ -40,6 +43,7 @@ export function playVO(name) {
   if (_muted) return;
 
   stopVO();
+  _playRequested = true;
 
   if (!clips[name]) {
     clips[name] = new Howl({
@@ -64,14 +68,19 @@ export function isVOPlaying() {
   return _current != null && typeof _current.playing === 'function' && _current.playing();
 }
 
+/** Returns true if VO was requested (even if still loading / buffering). */
+export function isVOActive() {
+  return _playRequested || isVOPlaying();
+}
+
 /**
  * Register a callback that fires when the current clip ends naturally.
- * If nothing is playing, fires immediately (next tick).
+ * If nothing is playing or pending, fires immediately (next tick).
  * Includes a 60s safety-net to prevent permanent hangs.
  */
 export function waitForVOEnd(cb) {
   _clearSafety();
-  if (!isVOPlaying()) {
+  if (!isVOActive()) {
     _endCallback = null;
     setTimeout(cb, 0);
     return;
@@ -84,6 +93,7 @@ export function waitForVOEnd(cb) {
     if (_current) { _current.stop(); }
     _current = null;
     _currentName = null;
+    _playRequested = false;
     if (fn) fn();
   }, 60000);
 }
@@ -91,6 +101,7 @@ export function waitForVOEnd(cb) {
 export function stopVO() {
   _clearSafety();
   _endCallback = null;
+  _playRequested = false;
   if (_current) {
     _current.stop();
   }
