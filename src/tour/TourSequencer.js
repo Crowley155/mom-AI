@@ -174,6 +174,19 @@ export class TourSequencer {
     tl.call(() => {
       this.overlay.showCaption(caption.partLabel, caption.teamName, caption.teamDesc);
       playVO(`step-${index + 1}-caption`);
+
+      if (!this.isManual) {
+        waitForVOEnd(() => {
+          if (this.masterTimeline !== tl) return;
+          gsap.delayedCall(2.0, () => {
+            if (this.masterTimeline !== tl) return;
+            tl.kill();
+            stopVO();
+            this.overlay.hideCaption();
+            this.runStep(index + 1);
+          });
+        });
+      }
     }, [], 0);
 
     const orbit = { angle: 0 };
@@ -190,20 +203,6 @@ export class TourSequencer {
         this.currentLookAt.copy(center);
       },
     }, 0);
-
-    if (!this.isManual) {
-      // Wait for intro VO to finish, then advance
-      waitForVOEnd(() => {
-        if (this.masterTimeline !== tl) return;
-        gsap.delayedCall(2.0, () => {
-          if (this.masterTimeline !== tl) return;
-          tl.kill();
-          stopVO();
-          this.overlay.hideCaption();
-          this.runStep(index + 1);
-        });
-      });
-    }
   }
 
   ghostNonHighlighted(activePartKey) {
