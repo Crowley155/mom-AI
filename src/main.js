@@ -81,10 +81,9 @@ async function init() {
   initMusic();
   setupEvents();
 
-  // Default to presenter mode
-  tourSequencer.setManual(true);
-  document.getElementById('autoplay-toggle').style.display = 'none';
-  document.getElementById('speed-bar').style.display = 'none';
+  // Default to autoplay mode
+  tourSequencer.setManual(false);
+  document.getElementById('autoplay-toggle').classList.add('active');
 
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     gsap.globalTimeline.timeScale(20);
@@ -235,9 +234,11 @@ function setupEvents() {
     tourSequencer.skipToNext();
   });
 
-  // VO mute toggle
+  // VO mute toggle — starts unmuted to match voiceover.js default
   let voMuted = false;
   const voToggle = document.getElementById('vo-toggle');
+  voToggle.textContent = '🔊';
+  voToggle.title = 'Toggle voiceover narration';
   voToggle.addEventListener('click', () => {
     voMuted = !voMuted;
     setVOMuted(voMuted);
@@ -276,7 +277,7 @@ function setupEvents() {
   });
 
   // Autoplay toggle — highlighted = ON, faded = OFF
-  let _autoplay = false;
+  let _autoplay = true;
   const autoplayToggle = document.getElementById('autoplay-toggle');
   autoplayToggle.addEventListener('click', () => {
     _autoplay = !_autoplay;

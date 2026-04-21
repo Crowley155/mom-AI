@@ -2,8 +2,8 @@ import { Howl } from 'howler';
 import { duckMusic, restoreMusic } from './music.js';
 
 const clips = {};
-let _muted = true;
-let _voVolume = 0.85;
+let _muted = false;
+let _voVolume = 0.30;
 let _current = null;
 let _currentName = null;
 let _endCallback = null;
