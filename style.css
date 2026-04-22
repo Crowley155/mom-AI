@@ -35,7 +35,7 @@ body {
   top: 1rem;
   right: 1.2rem;
   z-index: 20;
-  display: flex;
+  display: none;
   align-items: center;
   gap: 0.55rem;
   pointer-events: all;
@@ -220,7 +220,7 @@ body {
 #caption-box::before,
 #failure-box::before {
   content: '';
-  display: block;
+  display: none;
   width: 24px;
   height: 7px;
   margin: 0 auto 0.55rem;
@@ -294,7 +294,7 @@ body {
 }
 
 #tour-controls {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 1rem;
   pointer-events: all;
@@ -456,6 +456,7 @@ body {
 
 /* ── Resize handle ─────────────────────────────── */
 .resize-handle {
+  display: none;
   position: absolute;
   bottom: 4px;
   right: 4px;
@@ -492,6 +493,7 @@ body.text-large .failure-text { font-size: 1.45rem; }
 
 /* ── Collapse toggle ──────────────────────────── */
 .collapse-toggle {
+  display: none;
   position: absolute;
   top: 8px;
   right: 8px;
