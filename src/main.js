@@ -288,6 +288,10 @@ function setupEvents() {
 
   document.addEventListener('keydown', (e) => {
     if (!tourSequencer || !overlay) return;
+    if (e.key === 'Enter' && document.getElementById('intro-screen').classList.contains('active')) {
+      document.getElementById('start-btn').click();
+      return;
+    }
     switch (e.key) {
       case 'ArrowRight': tourSequencer.skipToNext(); break;
       case 'ArrowLeft': tourSequencer.skipToPrev(); break;
