@@ -8,7 +8,7 @@ export function initMusic() {
     src: [`${import.meta.env.BASE_URL}audio/background.mp3`],
     loop: true,
     volume: _userVolume,
-    html5: true,
+    // Web Audio mode (default) — iOS Safari ignores volume on HTML5 Audio elements
   });
 }
 

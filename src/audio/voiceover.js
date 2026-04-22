@@ -48,7 +48,7 @@ export function playVO(name) {
   if (!clips[name]) {
     clips[name] = new Howl({
       src: [clipUrl(name)],
-      html5: true,
+      // Web Audio mode (default) — iOS Safari ignores volume on HTML5 Audio elements
       onplay:      () => duckMusic(),
       onend:       () => _onNaturalEnd(),
       onstop:      () => _onForceStop(),
